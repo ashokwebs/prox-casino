@@ -211,7 +211,7 @@ impl App {
 
     pub fn tick(&mut self) {
         self.bj.tick();
-        self.slots.tick_animation();
+        self.slots.tick_animation(self.data.player.chips);
 
         if let Some((payout, mult, scatter)) = self.slots.tick_spin() {
             // Chips were already deducted at spin start, so just add the payout
@@ -235,16 +235,18 @@ impl App {
             }
             
             // Count symbol appearances on reels
-            for symbol in &self.slots.state.reels {
-                match symbol {
-                    SlotSymbol::Cherry => self.data.stats.cherry_matches += 1,
-                    SlotSymbol::Lemon => self.data.stats.lemon_matches += 1,
-                    SlotSymbol::Bell => self.data.stats.bell_matches += 1,
-                    SlotSymbol::Seven => self.data.stats.seven_matches += 1,
-                    SlotSymbol::Diamond => self.data.stats.diamond_matches += 1,
-                    SlotSymbol::Wild => self.data.stats.wild_matches += 1,
-                    SlotSymbol::Scatter => self.data.stats.scatter_matches += 1,
-                    _ => {}
+            for col in &self.slots.state.reels {
+                for symbol in col {
+                    match symbol {
+                        SlotSymbol::Cherry => self.data.stats.cherry_matches += 1,
+                        SlotSymbol::Lemon => self.data.stats.lemon_matches += 1,
+                        SlotSymbol::Bell => self.data.stats.bell_matches += 1,
+                        SlotSymbol::Seven => self.data.stats.seven_matches += 1,
+                        SlotSymbol::Diamond => self.data.stats.diamond_matches += 1,
+                        SlotSymbol::Wild => self.data.stats.wild_matches += 1,
+                        SlotSymbol::Scatter => self.data.stats.scatter_matches += 1,
+                        _ => {}
+                    }
                 }
             }
             
@@ -504,7 +506,12 @@ impl App {
                         MachineType::Retro => MachineType::Neon,
                         MachineType::Neon => MachineType::Hacker,
                         MachineType::Hacker => MachineType::Elite,
-                        MachineType::Elite => MachineType::Classic,
+                        MachineType::Elite => MachineType::Midnight,
+                        MachineType::Midnight => MachineType::DiamondRush,
+                        MachineType::DiamondRush => MachineType::Lucky7,
+                        MachineType::Lucky7 => MachineType::Inferno,
+                        MachineType::Inferno => MachineType::Monochrome,
+                        MachineType::Monochrome => MachineType::Classic,
                     };
                     self.slots.set_machine(next);
                     self.push_note(format!("Machine: {}", next.name()));

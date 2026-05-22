@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::{app::App, ui::theme::ProxTheme};
+use crate::{app::App, ui::theme::ProxTheme, games::slots::SlotSymbol};
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     let vert = Layout::default()
@@ -29,7 +29,7 @@ fn draw_top(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
         Span::styled(crate::utils::chip_format::format_chips(g.state.bet), theme.style_gold()),
         Span::raw("   "),
         Span::styled("Chips ", theme.style_dim()),
-        Span::styled(crate::utils::chip_format::format_chips_long(app.data.player.chips), theme.style_gold()),
+        Span::styled(crate::utils::chip_format::format_chips_long(g.state.display_chips), theme.style_gold()),
         Span::raw("   "),
         Span::styled("Mini ", theme.style_dim()),
         Span::styled(crate::utils::chip_format::format_chips(g.state.jackpots.mini), theme.style_green()),
@@ -69,31 +69,63 @@ fn draw_reels(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     ))];
     lines.push(Line::from(""));
 
-    let reels: Vec<[&'static str; 5]> = g.state.reels.iter().map(|s| s.big_symbol()).collect();
     let reel_count = g.state.reel_count;
+    let visible_rows = g.state.visible_rows;
+
+    // Convert the 2D symbol matrix into 2D big_symbol matrix: [col][row]
+    let mut big_reels: Vec<Vec<[&'static str; 5]>> = Vec::with_capacity(reel_count);
+    for col in 0..reel_count {
+        let mut big_col = Vec::with_capacity(visible_rows);
+        if col < g.state.reels.len() {
+            for row in 0..visible_rows {
+                if row < g.state.reels[col].len() {
+                    big_col.push(g.state.reels[col][row].big_symbol());
+                } else {
+                    big_col.push(SlotSymbol::Cherry.big_symbol()); // fallback
+                }
+            }
+        } else {
+            for _ in 0..visible_rows {
+                big_col.push(SlotSymbol::Cherry.big_symbol()); // fallback
+            }
+        }
+        big_reels.push(big_col);
+    }
 
     // Enhanced reel drawing with huge symbols
     let top = (0..reel_count).map(|_| "┏━━━━━━━━━━━━┓").collect::<Vec<_>>().join("  ");
     lines.push(Line::from(Span::styled(top, border)));
 
     let spacer = (0..reel_count).map(|_| "┃            ┃").collect::<Vec<_>>().join("  ");
-    lines.push(Line::from(Span::styled(spacer.clone(), border)));
 
-    for r in 0..5 {
-        let mut row_line = vec![];
-        for i in 0..reel_count {
-            row_line.push(Span::styled("┃  ", border));
-            let s_color = if flash && win { face } else { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) };
-            row_line.push(Span::styled(reels[i][r], s_color));
-            row_line.push(Span::styled("  ┃", border));
-            if i < reel_count - 1 {
-                row_line.push(Span::raw("  "));
+    for r_idx in 0..visible_rows {
+        lines.push(Line::from(Span::styled(spacer.clone(), border)));
+        
+        // Draw the 5 ASCII lines of the symbol
+        for sl_idx in 0..5 {
+            let mut row_line = vec![];
+            for c_idx in 0..reel_count {
+                row_line.push(Span::styled("┃  ", border));
+                let s_color = if flash && win { face } else { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) };
+                
+                row_line.push(Span::styled(big_reels[c_idx][r_idx][sl_idx], s_color));
+                
+                row_line.push(Span::styled("  ┃", border));
+                if c_idx < reel_count - 1 {
+                    row_line.push(Span::raw("  "));
+                }
             }
+            lines.push(Line::from(row_line));
         }
-        lines.push(Line::from(row_line));
-    }
 
-    lines.push(Line::from(Span::styled(spacer, border)));
+        lines.push(Line::from(Span::styled(spacer.clone(), border)));
+        
+        // Draw a separator between rows, unless it's the last row
+        if r_idx < visible_rows - 1 {
+            let sep = (0..reel_count).map(|_| "┠────────────┨").collect::<Vec<_>>().join("  ");
+            lines.push(Line::from(Span::styled(sep, border)));
+        }
+    }
     
     let bot = (0..reel_count).map(|_| "┗━━━━━━━━━━━━┛").collect::<Vec<_>>().join("  ");
     lines.push(Line::from(Span::styled(bot, border)));

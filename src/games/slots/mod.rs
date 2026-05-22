@@ -12,6 +12,23 @@ pub enum SlotSymbol {
     Crown,
     Flame,
     Cyber,
+    // Classic Vegas & Expansion
+    Bar,
+    DoubleBar,
+    TripleBar,
+    Horseshoe,
+    Coin,
+    Heart,
+    Star,
+    GoldBar,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Rarity {
+    Common,
+    Rare,
+    Epic,
+    Legendary,
 }
 
 impl SlotSymbol {
@@ -21,6 +38,15 @@ impl SlotSymbol {
 
     pub fn is_scatter(self) -> bool {
         matches!(self, SlotSymbol::Scatter)
+    }
+
+    pub fn rarity(self) -> Rarity {
+        match self {
+            SlotSymbol::Cherry | SlotSymbol::Lemon | SlotSymbol::Bell | SlotSymbol::Heart | SlotSymbol::Coin => Rarity::Common,
+            SlotSymbol::Flame | SlotSymbol::Cyber | SlotSymbol::Star | SlotSymbol::Bar => Rarity::Rare,
+            SlotSymbol::Seven | SlotSymbol::DoubleBar | SlotSymbol::Horseshoe | SlotSymbol::Crown => Rarity::Epic,
+            SlotSymbol::Diamond | SlotSymbol::TripleBar | SlotSymbol::GoldBar | SlotSymbol::Wild | SlotSymbol::Scatter => Rarity::Legendary,
+        }
     }
 
     pub fn big_symbol(self) -> [&'static str; 5] {
@@ -95,6 +121,62 @@ impl SlotSymbol {
                 "  💠💠  ",
                 "   💠   ",
             ],
+            SlotSymbol::Bar => [
+                " ▄████▄ ",
+                " ██████ ",
+                " ██████ ",
+                " ▀████▀ ",
+                "  BAR   ",
+            ],
+            SlotSymbol::DoubleBar => [
+                " ██████ ",
+                "  BAR   ",
+                "        ",
+                " ██████ ",
+                "  BAR   ",
+            ],
+            SlotSymbol::TripleBar => [
+                " ██████ ",
+                "  BAR   ",
+                " ██████ ",
+                "  BAR   ",
+                " ██████ ",
+            ],
+            SlotSymbol::Horseshoe => [
+                "  ▄██▄  ",
+                " ██  ██ ",
+                " ██  ██ ",
+                " ▀█  █▀ ",
+                "   🧲   ",
+            ],
+            SlotSymbol::Coin => [
+                "   ▄▄   ",
+                "  ████  ",
+                "  ████  ",
+                "   ▀▀   ",
+                "   🪙   ",
+            ],
+            SlotSymbol::Heart => [
+                "  ▄▄ ▄▄ ",
+                " ██████ ",
+                "  ████  ",
+                "   ██   ",
+                "   ❤️   ",
+            ],
+            SlotSymbol::Star => [
+                "   ██   ",
+                " ██████ ",
+                "  ████  ",
+                " ██  ██ ",
+                "   ⭐   ",
+            ],
+            SlotSymbol::GoldBar => [
+                "        ",
+                " ▄████▄ ",
+                " ██████ ",
+                " ▀████▀ ",
+                "  GOLD  ",
+            ],
         }
     }
 }
@@ -107,17 +189,27 @@ pub enum MachineType {
     Neon,
     Hacker,
     Elite,
+    Midnight,
+    DiamondRush,
+    Lucky7,
+    Inferno,
+    Monochrome,
 }
 
 impl MachineType {
     pub fn name(&self) -> &str {
         match self {
-            MachineType::Classic => "Classic",
-            MachineType::Cyber => "Cyber",
-            MachineType::Retro => "Retro Vegas",
-            MachineType::Neon => "Neon",
-            MachineType::Hacker => "Hacker",
+            MachineType::Classic => "Classic Vegas",
+            MachineType::Cyber => "Cyber Slots",
+            MachineType::Retro => "Retro Casino",
+            MachineType::Neon => "Neon Jackpot",
+            MachineType::Hacker => "Hacker Machine",
             MachineType::Elite => "Elite VIP",
+            MachineType::Midnight => "Midnight Machine",
+            MachineType::DiamondRush => "Diamond Rush",
+            MachineType::Lucky7 => "Lucky 7 Machine",
+            MachineType::Inferno => "Inferno Slots",
+            MachineType::Monochrome => "Monochrome",
         }
     }
 
@@ -173,6 +265,43 @@ impl MachineType {
                 (SlotSymbol::Wild, 15, 0),
                 (SlotSymbol::Scatter, 10, 0),
             ],
+            MachineType::Midnight => &[
+                (SlotSymbol::Star, 35, 4),
+                (SlotSymbol::Cyber, 25, 6),
+                (SlotSymbol::DoubleBar, 15, 10),
+                (SlotSymbol::TripleBar, 10, 20),
+                (SlotSymbol::Wild, 10, 0),
+                (SlotSymbol::Scatter, 5, 0),
+            ],
+            MachineType::DiamondRush => &[
+                (SlotSymbol::Diamond, 50, 10),
+                (SlotSymbol::GoldBar, 20, 15),
+                (SlotSymbol::Crown, 15, 20),
+                (SlotSymbol::Wild, 10, 0),
+                (SlotSymbol::Scatter, 5, 0),
+            ],
+            MachineType::Lucky7 => &[
+                (SlotSymbol::Seven, 40, 15),
+                (SlotSymbol::Cherry, 30, 2),
+                (SlotSymbol::Horseshoe, 15, 10),
+                (SlotSymbol::Wild, 10, 0),
+                (SlotSymbol::Scatter, 5, 0),
+            ],
+            MachineType::Inferno => &[
+                (SlotSymbol::Flame, 40, 5),
+                (SlotSymbol::Seven, 20, 15),
+                (SlotSymbol::TripleBar, 15, 20),
+                (SlotSymbol::Heart, 10, 10),
+                (SlotSymbol::Wild, 10, 0),
+                (SlotSymbol::Scatter, 5, 0),
+            ],
+            MachineType::Monochrome => &[
+                (SlotSymbol::Bar, 40, 3),
+                (SlotSymbol::DoubleBar, 30, 6),
+                (SlotSymbol::TripleBar, 15, 12),
+                (SlotSymbol::Diamond, 10, 25),
+                (SlotSymbol::Scatter, 5, 0),
+            ],
         }
     }
 }
@@ -204,8 +333,9 @@ impl JackpotPool {
 #[derive(Debug, Clone)]
 pub struct SlotsState {
     pub bet: i64,
-    pub reels: Vec<SlotSymbol>,
+    pub reels: Vec<Vec<SlotSymbol>>, // 2D grid: [column][row]
     pub reel_count: usize,
+    pub visible_rows: usize, // e.g. 3
     pub machine: MachineType,
     pub spinning: bool,
     pub spin_frames_left: u8,
@@ -217,14 +347,20 @@ pub struct SlotsState {
     pub jackpots: JackpotPool,
     pub auto_spin_remaining: u32,
     pub auto_spin_total: u32,
+    pub display_chips: i64,
 }
 
 impl Default for SlotsState {
     fn default() -> Self {
         Self {
             bet: 5_000,
-            reels: vec![SlotSymbol::Cherry, SlotSymbol::Lemon, SlotSymbol::Bell],
+            reels: vec![
+                vec![SlotSymbol::Cherry, SlotSymbol::Cherry, SlotSymbol::Cherry],
+                vec![SlotSymbol::Lemon, SlotSymbol::Lemon, SlotSymbol::Lemon],
+                vec![SlotSymbol::Bell, SlotSymbol::Bell, SlotSymbol::Bell]
+            ],
             reel_count: 3,
+            visible_rows: 3,
             machine: MachineType::Classic,
             spinning: false,
             spin_frames_left: 0,
@@ -236,6 +372,7 @@ impl Default for SlotsState {
             jackpots: JackpotPool::new(),
             auto_spin_remaining: 0,
             auto_spin_total: 0,
+            display_chips: 100_000,
         }
     }
 }
@@ -265,7 +402,7 @@ impl SlotsGame {
             3
         };
         self.state.reels = vec![
-            self.state.machine.symbol_pool()[0].0;
+            vec![self.state.machine.symbol_pool()[0].0; self.state.visible_rows];
             self.state.reel_count
         ];
         // Initialize reel spin frames for the new reel count
@@ -320,12 +457,22 @@ impl SlotsGame {
             let pool = self.state.machine.symbol_pool();
             let mut reels = Vec::with_capacity(self.state.reel_count);
             for _ in 0..self.state.reel_count {
-                reels.push(draw_symbol_weighted(pool));
+                let mut column = Vec::with_capacity(self.state.visible_rows);
+                for _ in 0..self.state.visible_rows {
+                    column.push(draw_symbol_weighted(pool));
+                }
+                reels.push(column);
             }
             self.state.reels = reels;
 
-            let has_wild = self.state.reels.iter().any(|s| s.is_wild());
-            let scatter_count = self.state.reels.iter().filter(|s| s.is_scatter()).count();
+            let mut has_wild = false;
+            let mut scatter_count = 0;
+            for col in &self.state.reels {
+                for s in col {
+                    if s.is_wild() { has_wild = true; }
+                    if s.is_scatter() { scatter_count += 1; }
+                }
+            }
 
             let mult = calculate_multiplier(&self.state.reels, pool);
             let mut payout = self.state.bet * mult;
@@ -366,13 +513,21 @@ impl SlotsGame {
             for i in 0..self.state.reel_count {
                 // Only spin reels that haven't finished their countdown
                 if self.state.reel_spin_frames[i] > 0 {
-                    reels.push(draw_symbol_weighted(pool));
+                    let mut column = Vec::with_capacity(self.state.visible_rows);
+                    for _ in 0..self.state.visible_rows {
+                        column.push(draw_symbol_weighted(pool));
+                    }
+                    reels.push(column);
                 } else {
                     // Keep the last spun symbol for finished reels
                     if !self.state.reels.is_empty() && i < self.state.reels.len() {
-                        reels.push(self.state.reels[i]);
+                        reels.push(self.state.reels[i].clone());
                     } else {
-                        reels.push(draw_symbol_weighted(pool));
+                        let mut column = Vec::with_capacity(self.state.visible_rows);
+                        for _ in 0..self.state.visible_rows {
+                            column.push(draw_symbol_weighted(pool));
+                        }
+                        reels.push(column);
                     }
                 }
             }
@@ -381,9 +536,20 @@ impl SlotsGame {
         }
     }
 
-    pub fn tick_animation(&mut self) {
+    pub fn tick_animation(&mut self, target_chips: i64) {
         if self.state.flash_counter > 0 {
             self.state.flash_counter -= 1;
+        }
+
+        // Chip count-up animation
+        if self.state.display_chips < target_chips {
+            let diff = target_chips - self.state.display_chips;
+            let step = (diff / 10).max(1);
+            self.state.display_chips += step;
+        } else if self.state.display_chips > target_chips {
+            let diff = self.state.display_chips - target_chips;
+            let step = (diff / 10).max(1);
+            self.state.display_chips -= step;
         }
     }
 }
@@ -400,11 +566,62 @@ fn draw_symbol_weighted(pool: &[(SlotSymbol, u32, i64)]) -> SlotSymbol {
     pool[0].0
 }
 
-fn calculate_multiplier(reels: &[SlotSymbol], pool: &[(SlotSymbol, u32, i64)]) -> i64 {
+fn calculate_multiplier(reels: &[Vec<SlotSymbol>], pool: &[(SlotSymbol, u32, i64)]) -> i64 {
+    let mut total_mult = 0;
+    let reel_count = reels.len();
+    if reel_count == 0 { return 0; }
+    let visible_rows = reels[0].len();
+
+    // Define paylines based on rows
+    // For 3 visible rows: 
+    // Line 0: middle row
+    // Line 1: top row
+    // Line 2: bottom row
+    // Line 3: diagonal top-left to bottom-right
+    // Line 4: diagonal bottom-left to top-right
+    
+    let mut paylines: Vec<Vec<SlotSymbol>> = Vec::new();
+    
+    // Horizontal lines
+    for r in 0..visible_rows {
+        let mut line = Vec::new();
+        for col in 0..reel_count {
+            line.push(reels[col][r]);
+        }
+        paylines.push(line);
+    }
+    
+    // Diagonal lines (only if visible_rows >= 3)
+    if visible_rows >= 3 {
+        // Diagonal 1
+        let mut d1 = Vec::new();
+        for col in 0..reel_count {
+            let r = col % visible_rows;
+            d1.push(reels[col][r]);
+        }
+        paylines.push(d1);
+        
+        // Diagonal 2
+        let mut d2 = Vec::new();
+        for col in 0..reel_count {
+            let r = (visible_rows - 1) - (col % visible_rows);
+            d2.push(reels[col][r]);
+        }
+        paylines.push(d2);
+    }
+
+    for line in paylines {
+        total_mult += evaluate_line(&line, pool);
+    }
+
+    total_mult
+}
+
+fn evaluate_line(line: &[SlotSymbol], pool: &[(SlotSymbol, u32, i64)]) -> i64 {
     let mut counts = std::collections::HashMap::new();
     let mut wild_count = 0;
 
-    for s in reels {
+    for s in line {
         if s.is_wild() {
             wild_count += 1;
         } else {
@@ -412,7 +629,7 @@ fn calculate_multiplier(reels: &[SlotSymbol], pool: &[(SlotSymbol, u32, i64)]) -
         }
     }
 
-    let n = reels.len();
+    let n = line.len();
 
     if wild_count == n {
         return if n >= 5 { 60 } else { 30 };
