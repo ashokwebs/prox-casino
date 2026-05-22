@@ -58,10 +58,20 @@ Full-featured blackjack with professional card rendering:
 Multiple slot machine types with weighted reels:
 
 - **3-reel and 5-reel** machines
+- **Elite VIP** high-risk/high-reward slots
 - **7 symbol types** — Cherry, Lemon, Bell, Seven, Diamond, Wild, Scatter
 - **Progressive jackpots** — Mini, Mega, and Ultra tiers
 - **Auto-spin** mode (10 spins)
-- **Win celebrations** with animated flash effects
+- **Massive ASCII art reels** with dynamic pulsing animations
+
+### 🌐 Online Multiplayer (Coming Soon)
+
+We are currently building the **PROX CASINO Online Engine**. Soon, you'll be able to:
+- **Play with friends** in real-time private tables
+- **Global leaderboards** for biggest payouts and longest streaks
+- **Live jackpots** shared across the entire community
+
+Stay tuned for the v1.0 release!
 
 ---
 

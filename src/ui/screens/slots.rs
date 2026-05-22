@@ -67,27 +67,35 @@ fn draw_reels(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
         if g.state.spinning { "        REELS SPINNING        " } else { "         READY TO SPIN        " },
         if g.state.spinning { theme.style_crimson() } else { theme.style_dim() },
     ))];
+    lines.push(Line::from(""));
 
-    let reels = g.state.reels.iter().map(|s| s.icon()).collect::<Vec<_>>();
-    
-    // Enhanced reel drawing with better spacing and visuals
-    let top = reels.iter().map(|_| "┏━━━━━━━┓").collect::<Vec<_>>().join("  ");
-    let mid1 = reels.iter().map(|_| "┃       ┃").collect::<Vec<_>>().join("  ");
-    let mid2 = reels.iter().map(|icon| {
-        // Add pulsing effect for winning symbols
-        if flash && win {
-            format!("┃  <{:^1}>  ┃", icon)
-        } else {
-            format!("┃   {:^1}   ┃", icon)
-        }
-    }).collect::<Vec<_>>().join("  ");
-    let mid3 = reels.iter().map(|_| "┃       ┃").collect::<Vec<_>>().join("  ");
-    let bot = reels.iter().map(|_| "┗━━━━━━━┛").collect::<Vec<_>>().join("  ");
+    let reels: Vec<[&'static str; 5]> = g.state.reels.iter().map(|s| s.big_symbol()).collect();
+    let reel_count = g.state.reel_count;
 
+    // Enhanced reel drawing with huge symbols
+    let top = (0..reel_count).map(|_| "┏━━━━━━━━━━━━┓").collect::<Vec<_>>().join("  ");
     lines.push(Line::from(Span::styled(top, border)));
-    lines.push(Line::from(Span::styled(mid1, border)));
-    lines.push(Line::from(Span::styled(mid2, face)));
-    lines.push(Line::from(Span::styled(mid3, border)));
+
+    let spacer = (0..reel_count).map(|_| "┃            ┃").collect::<Vec<_>>().join("  ");
+    lines.push(Line::from(Span::styled(spacer.clone(), border)));
+
+    for r in 0..5 {
+        let mut row_line = vec![];
+        for i in 0..reel_count {
+            row_line.push(Span::styled("┃  ", border));
+            let s_color = if flash && win { face } else { Style::default().fg(theme.text).add_modifier(Modifier::BOLD) };
+            row_line.push(Span::styled(reels[i][r], s_color));
+            row_line.push(Span::styled("  ┃", border));
+            if i < reel_count - 1 {
+                row_line.push(Span::raw("  "));
+            }
+        }
+        lines.push(Line::from(row_line));
+    }
+
+    lines.push(Line::from(Span::styled(spacer, border)));
+    
+    let bot = (0..reel_count).map(|_| "┗━━━━━━━━━━━━┛").collect::<Vec<_>>().join("  ");
     lines.push(Line::from(Span::styled(bot, border)));
 
     // Enhanced spinning animation with more frames

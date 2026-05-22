@@ -503,7 +503,8 @@ impl App {
                         MachineType::Cyber => MachineType::Retro,
                         MachineType::Retro => MachineType::Neon,
                         MachineType::Neon => MachineType::Hacker,
-                        MachineType::Hacker => MachineType::Classic,
+                        MachineType::Hacker => MachineType::Elite,
+                        MachineType::Elite => MachineType::Classic,
                     };
                     self.slots.set_machine(next);
                     self.push_note(format!("Machine: {}", next.name()));

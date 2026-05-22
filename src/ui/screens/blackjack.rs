@@ -313,12 +313,17 @@ fn draw_cmd(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     );
 }
 
-fn flash_color(app: &App, _theme: &ProxTheme) -> Option<Color> {
+fn flash_color(app: &App, theme: &ProxTheme) -> Option<Color> {
     let anim = app.bj.anim.as_ref()?;
     if anim.flash == 0 || anim.flash % 8 < 4 {
         return None;
     }
-    Some(Color::Rgb(200, 180, 160))
+    Some(match anim.kind {
+        Outcome::Blackjack => theme.gold,
+        Outcome::Win => theme.green,
+        Outcome::Lose => theme.red,
+        Outcome::Push => theme.cyan,
+    })
 }
 
 fn card_front(c: &Card, theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'static>> {
@@ -335,6 +340,37 @@ fn card_front(c: &Card, theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'st
         Style::default().fg(border_fg).add_modifier(Modifier::BOLD),
         |fg| Style::default().fg(fg).add_modifier(Modifier::BOLD),
     );
+    let big_suit = match c.suit {
+        crate::games::blackjack::Suit::Spades => vec![
+            Span::styled("   ◢◤◥◣   ", s),
+            Span::styled("  ◢████◣  ", s),
+            Span::styled(" ◢██████◣ ", s),
+            Span::styled(" ◥██████◤ ", s),
+            Span::styled("    ██    ", s),
+        ],
+        crate::games::blackjack::Suit::Hearts => vec![
+            Span::styled("  ◢████◣  ", s),
+            Span::styled(" ◢██████◣ ", s),
+            Span::styled(" ◥██████◤ ", s),
+            Span::styled("  ◥████◤  ", s),
+            Span::styled("   ◥◤◥◤   ", s),
+        ],
+        crate::games::blackjack::Suit::Diamonds => vec![
+            Span::styled("    ◢◣    ", s),
+            Span::styled("   ◢██◣   ", s),
+            Span::styled("  ◢████◣  ", s),
+            Span::styled("   ◥██◤   ", s),
+            Span::styled("    ◥◤    ", s),
+        ],
+        crate::games::blackjack::Suit::Clubs => vec![
+            Span::styled("    ◢◣    ", s),
+            Span::styled("  ◢████◣  ", s),
+            Span::styled(" ◢██████◣ ", s),
+            Span::styled(" ◥██████◤ ", s),
+            Span::styled("    ██    ", s),
+        ],
+    };
+
     // Every row = 19 chars: ┃(1) + 17 inner + ┃(1)
     vec![
         Line::from(Span::styled("┏━━━━━━━━━━━━━━━━━┓", b)),
@@ -344,40 +380,12 @@ fn card_front(c: &Card, theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'st
             Span::styled(" ", b), Span::styled(sym, s), Span::styled("            ┃", b),
         ]),
         Line::from(Span::styled("┃                 ┃", b)),
-        // "     S     S     " = 5+1+5+1+5 = 17
-        Line::from(vec![
-            Span::styled("┃     ", b), Span::styled(sym, s),
-            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
-        ]),
-        // "        S        " = 8+1+8 = 17
-        Line::from(vec![
-            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
-        ]),
-        // "     S     S     " = 5+1+5+1+5 = 17
-        Line::from(vec![
-            Span::styled("┃     ", b), Span::styled(sym, s),
-            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
-        ]),
-        // "        S        " = 8+1+8 = 17
-        Line::from(vec![
-            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
-        ]),
-        // "     S     S     " = 5+1+5+1+5 = 17
-        Line::from(vec![
-            Span::styled("┃     ", b), Span::styled(sym, s),
-            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
-        ]),
-        // "        S        " = 8+1+8 = 17
-        Line::from(vec![
-            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
-        ]),
-        // "     S     S     " = 5+1+5+1+5 = 17
-        Line::from(vec![
-            Span::styled("┃     ", b), Span::styled(sym, s),
-            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
-        ]),
+        Line::from(vec![Span::styled("┃   ", b), big_suit[0].clone(), Span::styled("    ┃", b)]),
+        Line::from(vec![Span::styled("┃   ", b), big_suit[1].clone(), Span::styled("    ┃", b)]),
+        Line::from(vec![Span::styled("┃   ", b), big_suit[2].clone(), Span::styled("    ┃", b)]),
+        Line::from(vec![Span::styled("┃   ", b), big_suit[3].clone(), Span::styled("    ┃", b)]),
+        Line::from(vec![Span::styled("┃   ", b), big_suit[4].clone(), Span::styled("    ┃", b)]),
         Line::from(Span::styled("┃                 ┃", b)),
-        // "            S K  " = 12+1+1+2+1 = 17
         Line::from(vec![
             Span::styled("┃            ", b), Span::styled(sym, s),
             Span::styled(" ", b), Span::styled(format!("{:>2}", rank), s), Span::styled(" ┃", b),

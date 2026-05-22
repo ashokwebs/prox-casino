@@ -15,27 +15,87 @@ pub enum SlotSymbol {
 }
 
 impl SlotSymbol {
-    pub fn icon(self) -> &'static str {
-        match self {
-            SlotSymbol::Cherry => "🍒",
-            SlotSymbol::Lemon => "🍋",
-            SlotSymbol::Bell => "🔔",
-            SlotSymbol::Seven => "7",
-            SlotSymbol::Diamond => "💎",
-            SlotSymbol::Wild => "⭐",
-            SlotSymbol::Scatter => "🎰",
-            SlotSymbol::Crown => "👑",
-            SlotSymbol::Flame => "🔥",
-            SlotSymbol::Cyber => "💠",
-        }
-    }
-
     pub fn is_wild(self) -> bool {
         matches!(self, SlotSymbol::Wild)
     }
 
     pub fn is_scatter(self) -> bool {
         matches!(self, SlotSymbol::Scatter)
+    }
+
+    pub fn big_symbol(self) -> [&'static str; 5] {
+        match self {
+            SlotSymbol::Cherry => [
+                "  ▄▄ ▄▄ ",
+                " ██████ ",
+                " ▀████▀ ",
+                "   ▀▀   ",
+                "   🍒   ",
+            ],
+            SlotSymbol::Lemon => [
+                "   ▄██▄ ",
+                "  ██████",
+                "  ▀████▀",
+                "   ▀██▀ ",
+                "   🍋   ",
+            ],
+            SlotSymbol::Bell => [
+                "   ▄▄   ",
+                "  ████  ",
+                " ██████ ",
+                " ▀████▀ ",
+                "   🔔   ",
+            ],
+            SlotSymbol::Seven => [
+                " ▀▀▀▀▀██",
+                "     ██ ",
+                "    ██  ",
+                "   ██   ",
+                "  ██    ",
+            ],
+            SlotSymbol::Diamond => [
+                "   ▄▄   ",
+                " ▄████▄ ",
+                " ██████ ",
+                " ▀████▀ ",
+                "   💎   ",
+            ],
+            SlotSymbol::Wild => [
+                "   ⭐   ",
+                "  ⭐⭐  ",
+                " ⭐⭐⭐ ",
+                "  ⭐⭐  ",
+                "   ⭐   ",
+            ],
+            SlotSymbol::Scatter => [
+                "  🎰🎰  ",
+                " 🎰🎰🎰 ",
+                " 🎰🎰🎰 ",
+                "  🎰🎰  ",
+                "   🎰   ",
+            ],
+            SlotSymbol::Crown => [
+                " 👑👑👑 ",
+                " ██████ ",
+                " ██████ ",
+                "  ▀▀▀▀  ",
+                "   👑   ",
+            ],
+            SlotSymbol::Flame => [
+                "   🔥   ",
+                "  🔥🔥  ",
+                " 🔥🔥🔥 ",
+                "  🔥🔥  ",
+                "   🔥   ",
+            ],
+            SlotSymbol::Cyber => [
+                "  💠💠  ",
+                " 💠💠💠 ",
+                " 💠💠💠 ",
+                "  💠💠  ",
+                "   💠   ",
+            ],
+        }
     }
 }
 
@@ -46,6 +106,7 @@ pub enum MachineType {
     Retro,
     Neon,
     Hacker,
+    Elite,
 }
 
 impl MachineType {
@@ -56,6 +117,7 @@ impl MachineType {
             MachineType::Retro => "Retro Vegas",
             MachineType::Neon => "Neon",
             MachineType::Hacker => "Hacker",
+            MachineType::Elite => "Elite VIP",
         }
     }
 
@@ -102,6 +164,13 @@ impl MachineType {
                 (SlotSymbol::Crown, 10, 12),
                 (SlotSymbol::Diamond, 8, 25),
                 (SlotSymbol::Wild, 7, 0),
+                (SlotSymbol::Scatter, 10, 0),
+            ],
+            MachineType::Elite => &[
+                (SlotSymbol::Diamond, 35, 15),
+                (SlotSymbol::Crown, 25, 20),
+                (SlotSymbol::Seven, 15, 30),
+                (SlotSymbol::Wild, 15, 0),
                 (SlotSymbol::Scatter, 10, 0),
             ],
         }
@@ -190,7 +259,7 @@ impl SlotsGame {
             return;
         }
         self.state.machine = machine;
-        self.state.reel_count = if matches!(machine, MachineType::Cyber | MachineType::Hacker) {
+        self.state.reel_count = if matches!(machine, MachineType::Cyber | MachineType::Hacker | MachineType::Elite) {
             5
         } else {
             3
