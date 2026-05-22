@@ -1,0 +1,287 @@
+================================================================================
+PROX CASINO — AGENT INSTRUCTIONS
+================================================================================
+This file contains everything a new AI agent needs to know about the project,
+its architecture, what has been done, and what needs to be built next.
+
+================================================================================
+PROJECT OVERVIEW
+================================================================================
+PROX CASINO is a cross-platform terminal casino simulator written in Rust.
+It uses virtual chips only (no real-money gambling).
+Version: 0.2.0
+Tech: Rust + ratatui + crossterm + tokio
+
+Repository: /home/charizard/proxcasino
+
+================================================================================
+CURRENT STATE
+================================================================================
+
+BUILD: cargo check / cargo clippy — clean (2 intentional warnings)
+  - unused method SecurityLevel::is_authoritative (future-ready)
+  - unused fields in ProxTheme (secondary, info, bg, surface) (future-ready)
+
+BINARY INSTALLED AS: `casino` (at ~/.local/bin/casino)
+BUILD & RUN:
+  cd /home/charizard/proxcasino && cargo run --release
+  OR just: casino (if previously installed)
+
+================================================================================
+PROJECT STRUCTURE
+================================================================================
+
+src/
+  main.rs                    — Entry point, terminal setup, main loop
+  app/
+    mod.rs                   — App state machine, all event handling, game bridging
+  core/
+    mod.rs
+    config.rs                — Constants (START_CHIPS, DAILY_BONUS, TICK_RATE_MS, etc.)
+  games/
+    mod.rs
+    traits.rs                — GameEngine trait (future-ready)
+    blackjack/
+      mod.rs                 — Blackjack game engine (cards, hands, dealer AI, rounds)
+    slots/
+      mod.rs                 — Slots game engine (reels, symbols, payouts, spinning)
+  models/
+    mod.rs
+    game.rs                  — GameKind enum (future-ready)
+    mode.rs                  — Mode enum (Offline, Online)
+    player.rs                — OfflinePlayer, OnlinePlayer, daily bonus
+    stats.rs                 — PlayerStats (tracked stats)
+  network/
+    mod.rs
+    client.rs                — OnlineClient stub (future-ready)
+    protocol.rs              — ClientAction, ServerEvent enums (future-ready)
+  security/
+    mod.rs                   — SecurityArchitecture docs (future-ready)
+  services/
+    mod.rs
+    save.rs                  — SaveService (load/save wrapper)
+  storage/
+    mod.rs
+    local.rs                 — SaveStore with atomic JSON writes to ~/.local/share/prox-casino/
+    sqlite.rs                — SqliteStore stub (future-ready)
+  ui/
+    mod.rs                   — Main draw() function, layout routing
+    theme.rs                 — ProxTheme (cyberpunk default, theming system)
+    animations/
+      mod.rs                 — Animation helpers (spinner, pulse, slot reel frames)
+    components/
+      mod.rs
+      header.rs              — Header with mode badge and tab navigation
+      footer.rs              — Footer with mode status
+      notifications.rs       — Notification panel
+      modal.rs               — Modal dialog component (future-ready)
+    screens/
+      mod.rs
+      dashboard.rs           — Main hub: player profile, stats, game info
+      blackjack.rs           — Blackjack table rendering
+      slots.rs               — Slot machine rendering
+      online.rs              — Online mode placeholder screen
+  utils/
+    mod.rs
+    errors.rs                — ProxError enum (future-ready)
+    rng.rs                   — RngPolicy struct (future-ready)
+
+================================================================================
+CURRENT FEATURES
+================================================================================
+
+OFFLINE MODE:
+  - Blackjack: hit, stand, double down, dealer AI (hits on <17, stands on 17+),
+    soft 17 NOT implemented (dealer stands on all 17s), 3:2 blackjack payout,
+    streak tracking, win/loss/push tracking
+  - Slots: 3-reel, 5 symbols (cherry, lemon, bell, seven, diamond),
+    weighted random, payout multipliers (3x, 4x, 7x, 12x, 25x for triples,
+    2x for pairs), animated spinning with box-drawn reels, flash on win
+  - Dashboard: profile, stats (wins/losses/spins/biggest win), daily bonus
+  - Save: atomic JSON saves (write tmp then rename), auto-save on view change
+  - Chip formatting: abbreviated (1.2M, 500K, etc.)
+  - Daily bonus: 50,000 chips, 1/day
+
+ONLINE MODE:
+  - Placeholder only. Client stub, protocol types, no actual networking.
+
+================================================================================
+WHAT NEEDS TO BE BUILT NEXT
+================================================================================
+
+NOTE: Online mode is DEPRIORITIZED. Focus ONLY on offline mode improvements.
+
+=== HIGH PRIORITY — GAME ENHANCEMENTS ===
+
+BLACKJACK:
+  [ ] Implement SPLIT — player can split pairs into two hands
+  [ ] Implement INSURANCE — offered when dealer shows Ace
+  [ ] Implement SURRENDER — player can forfeit half their bet
+  [ ] Add TABLE TIERS — Casual (min 1K), Standard (min 10K), High Roller (min 100K), VIP (min 1M)
+  [ ] Add MANUAL BET ENTRY — type a custom bet amount
+  [ ] Add QUICK BET BUTTONS — +100, +1K, +10K, +100K, 1/2, MAX
+  [ ] Add REPEAT BET — remember and repeat last bet
+  [ ] Track BUST COUNT, DEALER BUST COUNT, AVERAGE BET, BIGGEST HAND WIN
+  [ ] Add HAND HISTORY — show last N hands with outcome
+  [ ] Fix dealer AI to use soft 17 (hit on soft 17, stand on hard 17)
+
+SLOTS:
+  [ ] Implement AUTO-SPIN — x10, x50, x100, infinite
+  [ ] Add WILD symbols that substitute for other symbols
+  [ ] Add SCATTER symbols that trigger bonuses
+  [ ] Add 5-REEL support (at least one machine type)
+  [ ] Add MULTIPLE MACHINE TYPES — Cyber Slots, Retro Vegas, Neon Machine, Hacker Slots
+  [ ] Each machine has own symbol pool, rarity, payouts, visual effects
+  [ ] Add JACKPOT SYSTEM — mini, mega, ultra with progressive-like growing pots
+  [ ] Add BONUS ROUNDS — wheel spin, mystery pick, treasure box
+  [ ] Add RANDOM EVENTS — lucky round, double payout, hot streak, machine boost
+  [ ] Add NEAR-MISS effects
+  [ ] Track JACKPOT COUNT per type
+
+=== MEDIUM PRIORITY — GLOBAL SYSTEMS ===
+
+AUTO-SAVE:
+  [ ] Implement debounced auto-save (save every N seconds or on key events)
+  [ ] Auto-save on game state changes (after every hand/spin)
+  [ ] Show "Saving..." indicator
+
+SAVE SYSTEM:
+  [ ] Add MULTIPLE SAVE SLOTS (3-5 slots)
+  [ ] Add SAVE EXPORT/IMPORT (JSON file export)
+  [ ] Add PROFILE RESET option
+  [ ] Add AUTO-SAVE toggle in settings
+
+SETTINGS SYSTEM:
+  [ ] Animation speed (normal, fast, off)
+  [ ] Reduced effects mode
+  [ ] Compact mode
+  [ ] Default bet per game
+  [ ] Auto-save toggle
+  [ ] Theme selection
+
+THEME SYSTEM:
+  [ ] Implement multiple themes: cyberpunk (default), hacker green, retro amber,
+      monochrome, neon purple, minimal dark
+  [ ] Theme controls: colors, borders, highlights, card styles
+  [ ] Theme selector in settings/theme screen
+
+CHIP FORMATTING:
+  [ ] Add comma-separated formatting (2,000,000)
+  [ ] Keep abbreviated format as option (2.0M)
+  [ ] Format consistently across all screens
+
+DASHBOARD/HUB:
+  [ ] Add game selection with keyboard navigation
+  [ ] Add recent activity feed
+  [ ] Show lifetime stats prominently
+  [ ] Add settings/save manager access from hub
+  [ ] Make it feel alive with dynamic elements
+
+=== LOW PRIORITY — POLISH ===
+
+  [ ] Animated chip count changes
+  [ ] Probability helper in blackjack
+  [ ] Undo bet before deal
+  [ ] Animation skip (press any key to skip dealing animation)
+  [ ] Session statistics (per play session)
+  [ ] Consecutive login rewards
+  [ ] Milestone bonuses
+  [ ] Audio hooks (placeholder)
+
+================================================================================
+ARCHITECTURE NOTES
+================================================================================
+
+PATTERNS:
+  - Games are independent engines with their own state structs
+  - UI rendering is separate from game logic (screens/ directory)
+  - The App struct in app/mod.rs bridges games, UI, and services
+  - Theme is centralized in ui/theme.rs
+  - Save/load goes through services/save.rs -> storage/local.rs
+
+ADDING A NEW GAME:
+  1. Create src/games/<name>/mod.rs with game engine struct
+  2. Add rendering in src/ui/screens/<name>.rs
+  3. Add enum variant in app/mod.rs View enum
+  4. Wire up key handling in app/mod.rs handle_* methods
+  5. Add to header tabs in ui/components/header.rs
+  6. Add to draw_main match in ui/mod.rs
+  7. Register in mod.rs files
+
+ADDING A NEW THEME:
+  1. Add method to ProxTheme in ui/theme.rs
+  2. Select it via app settings
+  3. Pass theme ref through all draw calls (already done)
+
+ADDING STATS:
+  1. Add field to PlayerStats in models/stats.rs
+  2. Add serialization support (already have #[derive(Serialize, Deserialize)])
+  3. Track the stat in app/mod.rs apply_*_outcome methods
+  4. Display in screens/dashboard.rs or game screens
+
+BORROW CHECKER NOTES:
+  - When calling self.draw() inside self.state.hand.push(self.draw()), extract
+    to let card = self.draw() first, then push(card)
+  - Vec<Line> instead of Vec<Span> for Paragraph::new() in ratatui 0.27
+  - Use ratatui::text::Line and Span for styled text
+
+================================================================================
+KEY FILES TO MODIFY
+================================================================================
+
+ENHANCING BLACKJACK:
+  - src/games/blackjack/mod.rs — split, insurance, surrender, table tiers, soft 17
+  - src/ui/screens/blackjack.rs — better rendering, quick bet buttons, split UI
+  - src/app/mod.rs — bridge split/insurance/surrender to key handling
+
+ENHANCING SLOTS:
+  - src/games/slots/mod.rs — auto-spin, wilds, scatter, 5-reel, machines, jackpots
+  - src/ui/screens/slots.rs — better rendering, auto-spin UI
+  - src/app/mod.rs — bridge auto-spin, jackpots
+
+GLOBAL SYSTEMS:
+  - src/app/mod.rs — auto-save timer, settings
+  - src/models/stats.rs — more stat fields
+  - src/services/save.rs — multi-slot, export/import
+  - src/storage/local.rs — multi-slot save structure
+  - src/ui/screens/dashboard.rs — hub improvements
+  - src/ui/theme.rs — multiple themes
+  - src/core/config.rs — new constants
+
+FILES THAT PROBABLY DON'T NEED CHANGES:
+  - src/main.rs (keep simple)
+  - src/network/* (online mode deprioritized)
+  - src/security/* (future-ready)
+  - src/utils/* (utility, rarely changes)
+
+================================================================================
+TESTING / VERIFICATION
+================================================================================
+
+  cargo check              # quick compilation check
+  cargo clippy             # lint check (aim for 0 warnings beyond intentional)
+  cargo run --release      # run the app
+  cargo build --release    # release build
+
+Expected warnings (intentional, do NOT fix):
+  1. dead_code: SecurityLevel::is_authoritative (future online security)
+  2. dead_code: ProxTheme fields secondary/info/bg/surface (future theming)
+
+================================================================================
+NEXT AGENT COMMAND REFERENCE
+================================================================================
+
+Common operations:
+  cargo check                    # fast compilation check
+  cargo clippy                   # lint
+  cargo run --release            # run the binary
+  cargo build --release          # build release binary
+  cp target/release/prox-casino ~/.local/bin/casino  # install as 'casino'
+
+File operations:
+  All source in src/
+  Read first, then edit or write
+
+================================================================================
+END OF AGENT INSTRUCTIONS
+================================================================================

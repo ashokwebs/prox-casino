@@ -1,0 +1,11 @@
+/home/charizard/proxcasino/target/debug/deps/libsqlite3_sys-be8d9682b7444209.d: /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/lib.rs /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/error.rs /home/charizard/proxcasino/target/debug/build/libsqlite3-sys-ed0ab83a50281f21/out/bindgen.rs
+
+/home/charizard/proxcasino/target/debug/deps/liblibsqlite3_sys-be8d9682b7444209.rlib: /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/lib.rs /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/error.rs /home/charizard/proxcasino/target/debug/build/libsqlite3-sys-ed0ab83a50281f21/out/bindgen.rs
+
+/home/charizard/proxcasino/target/debug/deps/liblibsqlite3_sys-be8d9682b7444209.rmeta: /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/lib.rs /home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/error.rs /home/charizard/proxcasino/target/debug/build/libsqlite3-sys-ed0ab83a50281f21/out/bindgen.rs
+
+/home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/lib.rs:
+/home/charizard/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.28.0/src/error.rs:
+/home/charizard/proxcasino/target/debug/build/libsqlite3-sys-ed0ab83a50281f21/out/bindgen.rs:
+
+# env-dep:OUT_DIR=/home/charizard/proxcasino/target/debug/build/libsqlite3-sys-ed0ab83a50281f21/out
