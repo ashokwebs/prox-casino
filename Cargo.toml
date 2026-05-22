@@ -4,8 +4,7 @@ version = "0.2.0"
 edition = "2021"
 authors = ["PROX CASINO Contributors"]
 license = "MIT"
-description = "PROX CASINO: Cross-platform terminal social casino simulator with virtual chips"
-repository = "https://example.com/prox-casino"
+description = "terminal casino thing - blackjack and slots"
 
 [dependencies]
 anyhow = "1.0"
