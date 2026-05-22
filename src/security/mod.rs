@@ -19,6 +19,7 @@ pub enum SecurityLevel {
     Online,
 }
 
+#[allow(dead_code)]
 impl SecurityLevel {
     pub fn is_authoritative(&self) -> bool {
         matches!(self, SecurityLevel::Online)

@@ -36,6 +36,7 @@ pub fn rank_char(r: u8) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn card_value(rank: u8) -> u8 {
     match rank {
         1 => 11,
@@ -64,6 +65,7 @@ pub fn hand_value(cards: &[Card]) -> u8 {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlayState {
     Idle,
+    #[allow(dead_code)]
     Dealing { phase: u8 },
     PlayerTurn,
     SplitTurn { hand_idx: usize },
@@ -111,6 +113,7 @@ impl Hand {
 
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AnimState {
     pub flash: u8,
     pub kind: Outcome,
@@ -355,7 +358,7 @@ impl BlackjackEngine {
         match self.state {
             PlayState::DealerTurn => {
                 self.tick += 1;
-                if self.tick >= 4 {
+                if self.tick >= crate::core::BJ_DEALER_TICK_DELAY {
                     let dv = hand_value(&self.dealer);
                     if dv > 21 { self.finish_round(); return; }
                     if dv >= 17 && !(dv == 17 && is_soft(&self.dealer)) {

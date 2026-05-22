@@ -1,4 +1,19 @@
+# Build
 target/
+
+# IDE / Editor
+.opencode/
+.vscode/
+.idea/
+*.swp
+*.swo
 *.bak
 *.orig
 *~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent instructions (not part of the project)
+agentins

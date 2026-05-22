@@ -215,7 +215,7 @@ impl SlotsGame {
         self.state.spin_frames_left = crate::core::SLOTS_SPIN_FRAMES;
         // Initialize individual reel spin frames with staggered start times
         self.state.reel_spin_frames = (0..self.state.reel_count)
-            .map(|i| crate::core::SLOTS_SPIN_FRAMES + ((i * 2) as u8)) // Stagger by 2 frames each
+            .map(|i| crate::core::SLOTS_SPIN_FRAMES + ((i as u8) * crate::core::SLOTS_REEL_STAGGER))
             .collect();
         self.state.message = "Spinning...".to_string();
         self.state.flash_counter = 0;
@@ -268,7 +268,7 @@ impl SlotsGame {
 
             self.state.last_payout = payout;
             self.state.last_mult = mult;
-            self.state.flash_counter = if mult >= 50 { 24 } else if mult >= 20 { 16 } else { 10 };
+            self.state.flash_counter = if mult >= 50 { 40 } else if mult >= 20 { 28 } else { 16 };
 
             if mult >= 100 {
                 self.state.jackpots.ultra = (self.state.jackpots.ultra as f64 * 0.5) as i64 + 5_000_000;

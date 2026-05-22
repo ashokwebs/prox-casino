@@ -40,6 +40,7 @@ pub struct App {
     pub result_modal: Modal,
     pub save_pending: bool,
     pub save_ct: u8,
+    #[allow(dead_code)]
     pub online: OnlineClient,
     pub session_start_chips: i64,
     pub session_start_time: std::time::Instant,
@@ -213,13 +214,13 @@ impl App {
         self.slots.tick_animation();
 
         if let Some((payout, mult, scatter)) = self.slots.tick_spin() {
-            let net = payout - self.slots.state.bet;
-            self.data.player.chips = self.data.player.chips.saturating_add(net);
+            // Chips were already deducted at spin start, so just add the payout
+            self.data.player.chips = self.data.player.chips.saturating_add(payout);
             self.data.stats.games_played += 1;
             self.data.stats.slots_spins += 1;
-            self.data.stats.total_bet += self.slots.state.bet;
-            if net > 0 {
-                self.data.stats.total_won = self.data.stats.total_won.saturating_add(net);
+            let net = payout - self.slots.state.bet;
+            if payout > 0 {
+                self.data.stats.total_won = self.data.stats.total_won.saturating_add(payout);
                 if payout > self.data.stats.slots_biggest_win {
                     self.data.stats.slots_biggest_win = payout;
                 }
@@ -233,7 +234,7 @@ impl App {
                 self.data.stats.slots_win_streak = 0;
             }
             
-            // Count symbol matches for detailed stats
+            // Count symbol appearances on reels
             for symbol in &self.slots.state.reels {
                 match symbol {
                     SlotSymbol::Cherry => self.data.stats.cherry_matches += 1,
@@ -277,23 +278,15 @@ impl App {
             }
             self.bj.settled = true;
             self.bj.anim = Some(crate::games::blackjack::AnimState {
-                flash: 30, kind: results.first().map(|r| r.0).unwrap_or(Outcome::Push),
+                flash: crate::core::BJ_FLASH_FRAMES, kind: results.first().map(|r| r.0).unwrap_or(Outcome::Push),
             });
-            
-            // Show result modal for blackjack outcomes
-            if let Some((outcome, _)) = results.first() {
-                let (title, message) = match outcome {
-                    Outcome::Blackjack => ("BLACKJACK!", "You got a natural 21!"),
-                    Outcome::Win => ("YOU WIN!", "You beat the dealer!"),
-                    Outcome::Lose => ("HOUSE WINS", "Better luck next time."),
-                    Outcome::Push => ("PUSH", "Tie with the dealer."),
-                };
-                self.result_modal.show(title.to_string(), message.to_string());
-            }
         }
 
         if self.slots.state.auto_spin_remaining > 0 && !self.slots.state.spinning {
             if self.slots.begin_spin(self.data.player.chips) {
+                let bet = self.slots.state.bet;
+                self.data.player.chips = self.data.player.chips.saturating_sub(bet);
+                self.data.stats.total_bet += bet;
                 self.slots.state.auto_spin_remaining -= 1;
             } else { self.slots.state.auto_spin_remaining = 0; }
         }
@@ -311,10 +304,11 @@ impl App {
         let msg = match outcome {
             Outcome::Blackjack => {
                 self.data.stats.blackjack_wins += 1;
-                self.data.stats.blackjack_streak = self.data.stats.blackjack_streak.max(0) + 1;
+                self.data.stats.blackjack_win_streak += 1;
                 self.data.stats.blackjack_loss_streak = 0;
-                if self.data.stats.blackjack_streak > self.data.stats.blackjack_best_streak {
-                    self.data.stats.blackjack_best_streak = self.data.stats.blackjack_streak;
+                self.data.stats.blackjack_push_streak = 0;
+                if (self.data.stats.blackjack_win_streak as i64) > self.data.stats.blackjack_best_streak {
+                    self.data.stats.blackjack_best_streak = self.data.stats.blackjack_win_streak as i64;
                 }
                 self.data.stats.blackjack_count += 1;
                 self.data.player.chips = self.data.player.chips.saturating_add(delta);
@@ -340,7 +334,13 @@ impl App {
                 self.data.stats.blackjack_loss_streak += 1;
                 self.data.stats.blackjack_win_streak = 0;
                 self.data.stats.blackjack_push_streak = 0;
-                self.data.stats.bust_count += 1;
+                // Only count as bust if any player hand actually busted
+                for h in &self.bj.hands {
+                    if h.value() > 21 {
+                        self.data.stats.bust_count += 1;
+                        break;
+                    }
+                }
                 self.data.player.chips = self.data.player.chips.saturating_add(delta);
                 format!("Lose {}", crate::utils::chip_format::format_chips(delta.abs()))
             }
@@ -438,7 +438,7 @@ impl App {
                 if extra > 0 {
                     self.data.player.chips = self.data.player.chips.saturating_sub(extra);
                     self.data.stats.total_bet += extra;
-                    self.record_highest_bet(extra * 2);
+                    self.record_highest_bet(self.bj.bet + extra);
                 }
             }
             KeyCode::Char('p') | KeyCode::Char('P') => {
@@ -468,8 +468,12 @@ impl App {
                     self.slots.state.auto_spin_remaining = 0;
                     self.push_note("Auto stop");
                 } else if self.slots.begin_spin(self.data.player.chips) {
-                    self.record_highest_bet(self.slots.state.bet);
-                    self.push_note(format!("Spin @ {}", crate::utils::chip_format::format_chips(self.slots.state.bet)));
+                    // Deduct chips at spin start to prevent double-spending
+                    let bet = self.slots.state.bet;
+                    self.data.player.chips = self.data.player.chips.saturating_sub(bet);
+                    self.data.stats.total_bet += bet;
+                    self.record_highest_bet(bet);
+                    self.push_note(format!("Spin @ {}", crate::utils::chip_format::format_chips(bet)));
                 }
             }
             KeyCode::Char('a') | KeyCode::Char('A') => {
@@ -482,7 +486,10 @@ impl App {
                     self.slots.state.auto_spin_total = 10;
                     self.push_note("Auto: 10");
                     if !self.slots.state.spinning && self.slots.begin_spin(self.data.player.chips) {
-                        self.record_highest_bet(self.slots.state.bet);
+                        let bet = self.slots.state.bet;
+                        self.data.player.chips = self.data.player.chips.saturating_sub(bet);
+                        self.data.stats.total_bet += bet;
+                        self.record_highest_bet(bet);
                         self.slots.state.auto_spin_remaining = self.slots.state.auto_spin_remaining.saturating_sub(1);
                     }
                 }

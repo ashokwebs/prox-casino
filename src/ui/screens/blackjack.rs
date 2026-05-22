@@ -1,8 +1,8 @@
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, BorderType, Clear, Paragraph},
+    widgets::{Block, Borders, BorderType, Paragraph},
     Frame,
 };
 
@@ -21,11 +21,6 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     draw_top(frame, chunks[0], app, theme);
     draw_table(frame, chunks[1], app, theme);
     draw_cmd(frame, chunks[2], app, theme);
-    
-    // Draw centered overlay for blackjack results when game is over
-    if matches!(app.bj.state, PlayState::RoundOver) && app.bj.settled {
-        draw_centered_result_overlay(frame, area, app, theme);
-    }
 }
 
 fn draw_top(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
@@ -67,7 +62,7 @@ fn draw_top(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
 fn draw_table(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(12), Constraint::Min(11), Constraint::Length(8)])
+        .constraints([Constraint::Length(16), Constraint::Min(15), Constraint::Length(5)])
         .split(area);
 
     draw_house(frame, chunks[0], app, theme);
@@ -211,11 +206,21 @@ fn draw_player(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
 }
 
 fn draw_bottom_msg(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
-    let msg = app.bj.message.clone();
+    let line = if matches!(app.bj.state, PlayState::RoundOver) && app.bj.settled {
+        let (title, accent) = round_banner(app, theme);
+        Line::from(vec![
+            Span::styled(format!(" {} ", title), Style::default().fg(accent).add_modifier(Modifier::BOLD)),
+            Span::raw("  "),
+            Span::styled(app.bj.message.as_str(), Style::default().fg(theme.text)),
+            Span::raw("    "),
+            Span::styled("[Space] Deal", Style::default().fg(theme.dim)),
+        ])
+    } else {
+        Line::from(Span::styled(app.bj.message.as_str(), Style::default().fg(theme.text)))
+    };
 
     frame.render_widget(
-        Paragraph::new(Span::styled(msg.as_str(), Style::default().fg(theme.text).add_modifier(Modifier::BOLD)))
-            .block(theme.block("Status")),
+        Paragraph::new(line).block(theme.block("Status")),
         area,
     );
 }
@@ -241,42 +246,43 @@ fn round_banner(app: &App, theme: &ProxTheme) -> (&'static str, Color) {
     }
 }
 
+#[allow(dead_code)]
 fn banner_art(title: &str) -> &'static [&'static str] {
     match title {
         "BLACKJACK" => &[
-            r" ██████ █          █████ ██████ █   █          ████ █████ ██████ █   █",
-            r" █   █ █          █   █ █      █  █            █   █   █ █      █  █ ",
-            r" █████ █          █████ █      ███             █   █████ █      ███  ",
-            r" █   █ █          █   █ █      █  █        █   █   █   █ █      █  █ ",
-            r" █████ ███████    █   █ ██████ █   █       ███    █   █ ██████ █   █",
+            r"  ____  _        _    ____ _  __    _   _    ____ _  __ ",
+            r" | __ )| |      / \  / ___| |/ /   | | / \  / ___| |/ / ",
+            r" |  _ \| |     / _ \| |   | ' / _  | |/ _ \| |   | ' /  ",
+            r" | |_) | |___ / ___ \ |___| . \| |_| / ___ \ |___| . \  ",
+            r" |____/|_____/_/   \_\____|_|\_\\___/_/   \_\____|_|\_\ ",
         ],
         "YOU WIN" => &[
-            r" ███   ███   █   █       █   █ ███ █   █ ",
-            r" █ █  █   █  █   █       █   █  █  ██  █ ",
-            r"  █   █   █  █   █       █ █ █  █  █ █ █ ",
-            r"  █   █   █  █   █       ██ ██  █  █  ██ ",
-            r"  █    ███    ███        █   █ ███ █   █ ",
+            r" __   __  ___  _   _  __        __ ___  _   _  ",
+            r" \ \ / / / _ \| | | | \ \      / /|_ _|| \ | | ",
+            r"  \ V / | | | | | | |  \ \ /\ / /  | | |  \| | ",
+            r"   | |  | |_| | |_| |   \ V  V /   | | | |\  | ",
+            r"   |_|   \___/ \___/     \_/\_/   |___||_| \_| ",
         ],
         "HOUSE WINS" => &[
-            r" █   █ ███   █   █ ████ ████      █   █ ███ █   █ ████ ",
-            r" █   █ █   █ █   █ █    █         █   █  █  ██  █ █    ",
-            r" █████ █   █ █   █ ███  ███       █ █ █  █  █ █ █ ███  ",
-            r" █   █ █   █ █   █    █ █         ██ ██  █  █  ██ █    ",
-            r" █   █ ███   ███  ████ ████      █   █ ███ █   █ ████ ",
+            r" _   _  ___  _   _ ____  _____  __        __ ___  _   _  ____  ",
+            r"| | | |/ _ \| | | / ___|| ____| \ \      / /|_ _|| \ | |/ ___| ",
+            r"| |_| | | | | | | \___ \|  _|    \ \ /\ / /  | | |  \| |\___ \ ",
+            r"|  _  | |_| | |_| |___) | |___    \ V  V /   | | | |\  | ___) |",
+            r"|_| |_|\___/ \___/|____/|_____|    \_/\_/   |___||_| \_||____/ ",
         ],
         "PUSH" => &[
-            r" █████ █   █ ████ █   █ ",
-            r" █   █ █   █ █    █   █ ",
-            r" █████ █   █ ███  █████ ",
-            r" █     █   █    █ █   █ ",
-            r" █      ███  ████ █   █ ",
+            r"  ____  _   _  ____  _   _  ",
+            r" |  _ \| | | |/ ___|| | | | ",
+            r" | |_) | | | |\___ \| |_| | ",
+            r" |  __/| |_| | ___) |  _  | ",
+            r" |_|    \___/ |____/|_| |_| ",
         ],
         _ => &[
-            r" ██   ██ ███ █   █ ████ ████ ",
-            r" █ █ █ █  █   █ █  █    █   █",
-            r" █  █  █  █    █   ███  █   █",
-            r" █     █  █   █ █  █    █   █",
-            r" █     █ ███ █   █ ████ ████ ",
+            r"  ____   ___  _   _ _   _ ____   ",
+            r" |  _ \ / _ \| | | | \ | |  _ \  ",
+            r" | |_) | | | | | | |  \| | | | | ",
+            r" |  _ <| |_| | |_| | |\  | |_| | ",
+            r" |_| \_\\___/ \___/|_| \_|____/  ",
         ],
     }
 }
@@ -307,163 +313,96 @@ fn draw_cmd(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     );
 }
 
-fn draw_centered_result_overlay(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
-    if app.bj.anim.as_ref().map_or(0, |a| a.flash) == 0 {
-        return;
-    }
-    
-    let (title, accent) = round_banner(app, theme);
-    let pulse = app.bj.anim.as_ref().map(|a| a.flash > 0 && a.flash % 2 == 0).unwrap_or(false);
-    let overlay_area = centered_rect(area, 62, 45);
-    
-    frame.render_widget(Clear, overlay_area);
-    
-    let art = banner_art(title);
-    let max_art_width = art.iter().map(|line| line.len()).max().unwrap_or(24);
-    let art_width = max_art_width + 4;
-    
-    let block = Block::default()
-        .title(format!(" {} ", title))
-        .borders(Borders::ALL)
-        .border_type(BorderType::Thick)
-        .border_style(Style::default().fg(accent))
-        .style(if pulse {
-            Style::default().bg(accent)
-        } else {
-            Style::default().bg(Color::Black)
-        });
-    
-    let mut lines = Vec::new();
-    for row in art {
-        let padded = format!("{:^art_width$}", row, art_width = art_width);
-        lines.push(Line::from(Span::styled(
-            padded,
-            if pulse {
-                Style::default().fg(theme.surface).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(accent).add_modifier(Modifier::BOLD)
-            },
-        )));
-    }
-    
-    lines.push(Line::from(""));
-    lines.push(Line::from(Span::styled(
-        format!("{:^art_width$}", app.bj.message, art_width = art_width),
-        if pulse {
-            Style::default().fg(theme.surface).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(theme.text).add_modifier(Modifier::BOLD)
-        },
-    )));
-    
-    frame.render_widget(
-        Paragraph::new(lines)
-            .block(block)
-            .alignment(Alignment::Center),
-        overlay_area,
-    );
-}
-
-fn centered_rect(r: Rect, percent_x: u16, percent_y: u16) -> Rect {
-    let popup_x = r.width * percent_x / 100;
-    let popup_y = r.height * percent_y / 100;
-    let x = r.x + (r.width - popup_x) / 2;
-    let y = r.y + (r.height - popup_y) / 2;
-    Rect {
-        x,
-        y,
-        width: popup_x.max(20), // Ensure minimum width
-        height: popup_y.max(10), // Ensure minimum height
-    }
-}
-
-fn flash_color(app: &App, theme: &ProxTheme) -> Option<Color> {
+fn flash_color(app: &App, _theme: &ProxTheme) -> Option<Color> {
     let anim = app.bj.anim.as_ref()?;
-    if anim.flash == 0 || anim.flash % 2 != 0 {
+    if anim.flash == 0 || anim.flash % 8 < 4 {
         return None;
     }
-    Some(match anim.kind {
-        Outcome::Blackjack => theme.gold,
-        Outcome::Win => theme.green,
-        Outcome::Lose => theme.red,
-        Outcome::Push => theme.cyan,
-    })
+    Some(Color::Rgb(200, 180, 160))
 }
 
 fn card_front(c: &Card, theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'static>> {
     let is_red = matches!(c.suit, Suit::Hearts | Suit::Diamonds);
     let suit_fg = if is_red { theme.card_red } else { theme.card_black };
-    let border_fg = Color::Rgb(160, 150, 155);
+    let border_fg = Color::Rgb(90, 80, 85);
     let sym = c.suit_char();
     let rank = card_value_single(c);
-    let face_style = flash.map_or(
+    let s = flash.map_or(
         Style::default().fg(suit_fg).add_modifier(Modifier::BOLD),
         |fg| Style::default().fg(fg).add_modifier(Modifier::BOLD),
     );
-    let border_style = flash.map_or(
+    let b = flash.map_or(
         Style::default().fg(border_fg).add_modifier(Modifier::BOLD),
         |fg| Style::default().fg(fg).add_modifier(Modifier::BOLD),
     );
-    let suit_row = format!("{} {} {}", sym, sym, sym);
-
+    // Every row = 19 chars: ┃(1) + 17 inner + ┃(1)
     vec![
-        Line::from(Span::styled("┏━━━━━━━━━━━┓", border_style)),
+        Line::from(Span::styled("┏━━━━━━━━━━━━━━━━━┓", b)),
+        // " K ♠             " = 1+2+1+1+12 = 17
         Line::from(vec![
-            Span::styled("┃", border_style),
-            Span::styled(format!(" {:<2}", rank), face_style),
-            Span::styled("        ┃", border_style),
+            Span::styled("┃ ", b), Span::styled(format!("{:<2}", rank), s),
+            Span::styled(" ", b), Span::styled(sym, s), Span::styled("            ┃", b),
         ]),
-        Line::from(Span::styled("┃           ┃", border_style)),
+        Line::from(Span::styled("┃                 ┃", b)),
+        // "     S     S     " = 5+1+5+1+5 = 17
         Line::from(vec![
-            Span::styled("┃   ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("   ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("   ┃", border_style),
+            Span::styled("┃     ", b), Span::styled(sym, s),
+            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
         ]),
+        // "        S        " = 8+1+8 = 17
         Line::from(vec![
-            Span::styled("┃    ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("    ┃", border_style),
+            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
         ]),
+        // "     S     S     " = 5+1+5+1+5 = 17
         Line::from(vec![
-            Span::styled("┃  ", border_style),
-            Span::styled(suit_row, face_style),
-            Span::styled("  ┃", border_style),
+            Span::styled("┃     ", b), Span::styled(sym, s),
+            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
         ]),
+        // "        S        " = 8+1+8 = 17
         Line::from(vec![
-            Span::styled("┃    ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("    ┃", border_style),
+            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
         ]),
+        // "     S     S     " = 5+1+5+1+5 = 17
         Line::from(vec![
-            Span::styled("┃   ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("   ", border_style),
-            Span::styled(sym, face_style),
-            Span::styled("   ┃", border_style),
+            Span::styled("┃     ", b), Span::styled(sym, s),
+            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
         ]),
+        // "        S        " = 8+1+8 = 17
         Line::from(vec![
-            Span::styled("┃        ", border_style),
-            Span::styled(format!("{:>2} ", rank), face_style),
-            Span::styled("┃", border_style),
+            Span::styled("┃        ", b), Span::styled(sym, s), Span::styled("        ┃", b),
         ]),
-        Line::from(Span::styled("┗━━━━━━━━━━━┛", border_style)),
+        // "     S     S     " = 5+1+5+1+5 = 17
+        Line::from(vec![
+            Span::styled("┃     ", b), Span::styled(sym, s),
+            Span::styled("     ", b), Span::styled(sym, s), Span::styled("     ┃", b),
+        ]),
+        Line::from(Span::styled("┃                 ┃", b)),
+        // "            S K  " = 12+1+1+2+1 = 17
+        Line::from(vec![
+            Span::styled("┃            ", b), Span::styled(sym, s),
+            Span::styled(" ", b), Span::styled(format!("{:>2}", rank), s), Span::styled(" ┃", b),
+        ]),
+        Line::from(Span::styled("┗━━━━━━━━━━━━━━━━━┛", b)),
     ]
 }
 
-fn card_back(theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'static>> {
-    let fg = flash.unwrap_or(theme.crimson);
-    let style = Style::default().fg(fg).add_modifier(Modifier::BOLD);
+fn card_back(_theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'static>> {
+    let fg = flash.unwrap_or(Color::Rgb(130, 25, 25));
+    let c = Style::default().fg(fg).add_modifier(Modifier::BOLD);
+    // Single color, 19 chars: ┃(1) + 17 inner + ┃(1)
     vec![
-        Line::from(Span::styled("┏━━━━━━━━━━━┓", style)),
-        Line::from(Span::styled("┃▓▓▓▓▓▓▓▓▓▓▓┃", style)),
-        Line::from(Span::styled("┃▓▒▓▒▓▒▓▒▓▒▓┃", style)),
-        Line::from(Span::styled("┃▒▓▒▓▒▓▒▓▒▓▒┃", style)),
-        Line::from(Span::styled("┃▓▒▓▒▓▒▓▒▓▒▓┃", style)),
-        Line::from(Span::styled("┃▒▓▒▓▒▓▒▓▒▓▒┃", style)),
-        Line::from(Span::styled("┃▓▓▓▓▓▓▓▓▓▓▓┃", style)),
-        Line::from(Span::styled("┗━━━━━━━━━━━┛", style)),
+        Line::from(Span::styled("┏━━━━━━━━━━━━━━━━━┓", c)),
+        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
+        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
+        Line::from(Span::styled("┗━━━━━━━━━━━━━━━━━┛", c)),
     ]
 }
 
@@ -476,7 +415,7 @@ fn merge_cards(lines: &mut Vec<Line>, card_lines: &[Vec<Line<'static>>]) {
         let mut row: Vec<Span> = Vec::new();
         for (ci, card) in card_lines.iter().enumerate() {
             if ci > 0 {
-                row.push(Span::raw("  "));
+                row.push(Span::raw(" "));
             }
             if let Some(line) = card.get(row_idx) {
                 for span in &line.spans {
@@ -487,3 +426,4 @@ fn merge_cards(lines: &mut Vec<Line>, card_lines: &[Vec<Line<'static>>]) {
         lines.push(Line::from(row));
     }
 }
+

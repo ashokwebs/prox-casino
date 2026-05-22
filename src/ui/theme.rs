@@ -1,6 +1,7 @@
 use ratatui::style::{Color, Modifier, Style};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ProxTheme {
     pub bg: Color,
     pub surface: Color,
