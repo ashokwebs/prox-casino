@@ -8,79 +8,102 @@ use ratatui::{
 
 use crate::app::{App, View};
 use crate::ui::theme::ProxTheme;
+use crate::utils::chip_format::{format_chips, format_chips_long};
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(18), Constraint::Length(11)])
+        .constraints([Constraint::Min(20), Constraint::Length(11)])
         .split(area);
 
     let cols = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)])
+        .constraints([
+            Constraint::Percentage(30),
+            Constraint::Percentage(35),
+            Constraint::Percentage(35),
+        ])
         .split(rows[0]);
 
+    let middle = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(10), Constraint::Min(10)])
+        .split(cols[1]);
+    let right = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(10), Constraint::Min(10)])
+        .split(cols[2]);
+
     draw_account(frame, cols[0], app, theme);
-    draw_stats(frame, cols[1], app, theme);
-    draw_settings(frame, cols[2], app, theme);
+    draw_ledger(frame, middle[0], app, theme);
+    draw_blackjack(frame, middle[1], app, theme);
+    draw_slots(frame, right[0], app, theme);
+    draw_sessions(frame, right[1], app, theme);
     draw_floor_nav(frame, rows[1], app, theme);
 }
 
 fn draw_account(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
-    let d = &app.data;
-    let can = d.player.can_claim_daily();
-    let level = level_icon(d.player.chips);
-    let net = d.stats.total_won - d.stats.total_bet;
+    let player = &app.data.player;
+    let net = app.data.stats.total_won - app.data.stats.total_bet;
+    let (level, tier) = level_icon(player.chips);
+    let session_net = player.chips - app.session_start_chips;
     let display_name = if app.editing_name {
         format!("> {}_", app.name_input)
     } else {
-        d.player.name.clone()
+        player.name.clone()
     };
 
     let lines = vec![
-        Line::from(Span::styled("  .----------------------------.  ", theme.style_dim())),
-        Line::from(Span::styled("  |       PROX CASINO         |  ", theme.style_crimson())),
-        Line::from(Span::styled("  |      OFFLINE ACCOUNT      |  ", theme.style_gold())),
-        Line::from(Span::styled("  |    chips / stats / play   |  ", theme.style_dim())),
-        Line::from(Span::styled("  '----------------------------'  ", theme.style_dim())),
+        Line::from(Span::styled("  .------------------------.  ", theme.style_dim())),
+        Line::from(Span::styled("  |      PROX CASINO      |  ", theme.style_crimson())),
+        Line::from(Span::styled("  |     OFFLINE FLOOR     |  ", theme.style_gold())),
+        Line::from(Span::styled("  '------------------------'  ", theme.style_dim())),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  PROFILE  ", theme.style_crimson()),
-            Span::styled("████", theme.style_gold()),
-            Span::styled(format!(" {}  ", display_name), theme.style_gold().add_modifier(Modifier::BOLD)),
-            Span::styled(format!("Lvl {}", level.1), theme.style_amber()),
+            Span::styled("  PLAYER   ", theme.style_dim()),
+            Span::styled(display_name, theme.style_gold().add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled("  TIER   ", theme.style_dim()), 
-            Span::styled(level.2, if level.1 >= 10 { theme.style_gold() } else if level.1 >= 5 { theme.style_amber() } else { theme.style_dim() })
+            Span::styled("  LEVEL    ", theme.style_dim()),
+            Span::styled(level, theme.style_amber()),
+            Span::raw("  "),
+            Span::styled(tier, theme.style_dim()),
         ]),
         Line::from(vec![
-            Span::styled("  CHIPS  ", theme.style_dim()),
-            Span::styled(crate::utils::chip_format::format_chips_long(d.player.chips), theme.style_gold().add_modifier(Modifier::BOLD)),
+            Span::styled("  CHIPS    ", theme.style_dim()),
+            Span::styled(format_chips_long(player.chips), theme.style_gold().add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled("  NET    ", theme.style_dim()),
+            Span::styled("  NET      ", theme.style_dim()),
             Span::styled(
-                crate::utils::chip_format::format_chips(net.abs()),
+                format_chips(net),
                 if net >= 0 { theme.style_green() } else { theme.style_red() },
             ),
-            Span::styled(if net >= 0 { " ▲" } else { " ▼" }, if net >= 0 { theme.style_green() } else { theme.style_red() }),
         ]),
         Line::from(vec![
-            Span::styled("  DAILY  ", theme.style_dim()),
-            Span::styled(if can { "READY [d]" } else { "claimed" }, if can { theme.style_green() } else { theme.style_dim() }),
-            Span::styled(if can { " ◉" } else { " ○" }, if can { theme.style_green() } else { theme.style_dim() }),
+            Span::styled("  SESSION  ", theme.style_dim()),
+            Span::styled(
+                format_chips(session_net),
+                if session_net >= 0 { theme.style_green() } else { theme.style_red() },
+            ),
+            Span::raw("  "),
+            Span::styled(format_duration(app.session_start_time.elapsed().as_secs()), theme.style_dim()),
+        ]),
+        Line::from(vec![
+            Span::styled("  DAILY    ", theme.style_dim()),
+            Span::styled(
+                if player.can_claim_daily() { "READY [D]" } else { "CLAIMED" },
+                if player.can_claim_daily() { theme.style_green() } else { theme.style_dim() },
+            ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("  ──────────────────────  ", theme.style_dim()),
-        ]),
         Line::from(vec![Span::styled("  [E] Edit name", theme.style_amber())]),
+        Line::from(vec![Span::styled("  [R] Help", theme.style_amber())]),
         Line::from(vec![Span::styled(
             if app.editing_name {
                 "  [Enter] Save   [Esc] Cancel"
             } else {
-                "  [D] Daily claim   [R] Dev note"
+                "  [Q] Save and quit"
             },
             theme.style_dim(),
         )]),
@@ -94,162 +117,129 @@ fn draw_account(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     );
 }
 
-fn draw_stats(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
-    let s = &app.data.stats;
-    let vertical = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
-    let top = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(vertical[0]);
-    let bottom = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(vertical[1]);
+fn draw_ledger(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
+    let stats = &app.data.stats;
+    let net = stats.total_won - stats.total_bet;
+    let session_net = app.data.player.chips - app.session_start_chips;
 
-    let total_bj = s.blackjack_wins + s.blackjack_losses + s.blackjack_pushes;
-    let win_rate = if total_bj > 0 {
-        (s.blackjack_wins as f64 / total_bj as f64 * 100.0) as u64
-    } else {
-        0
-    };
-    let avg_bet = if s.games_played > 0 { s.total_bet / s.games_played as i64 } else { 0 };
-
-    frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled(" Ledger", theme.style_crimson())),
-            Line::from(""),
-            Line::from(vec![Span::styled("  Played   ", theme.style_dim()), Span::raw(s.games_played.to_string())]),
-            Line::from(vec![Span::styled("  Win %    ", theme.style_dim()), Span::styled(format!("{}%", win_rate), if win_rate >= 50 { theme.style_green() } else { theme.style_amber() })]),
-            Line::from(vec![Span::styled("  Total Bet", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(s.total_bet), theme.style_red())]),
-            Line::from(vec![Span::styled("  Total Won", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(s.total_won), theme.style_green())]),
-            Line::from(vec![Span::styled("  Avg Bet  ", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(avg_bet), theme.style_amber())]),
-            Line::from(vec![Span::styled("  Highest  ", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(s.highest_bet), theme.style_gold())]),
-        ])
-        .block(theme.block("Ledger"))
-        .style(Style::default().fg(theme.text)),
-        top[0],
-    );
-
-    frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled(" Blackjack Record", theme.style_crimson())),
-            Line::from(""),
-            Line::from(vec![Span::styled("  Wins    ", theme.style_dim()), Span::styled(s.blackjack_wins.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Losses  ", theme.style_dim()), Span::styled(s.blackjack_losses.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  Pushes  ", theme.style_dim()), Span::styled(s.blackjack_pushes.to_string(), theme.style_amber())]),
-            Line::from(vec![Span::styled("  BJ Hits ", theme.style_dim()), Span::styled(s.blackjack_count.to_string(), theme.style_gold())]),
-            Line::from(vec![Span::styled("  Best Stk", theme.style_dim()), Span::styled(s.blackjack_best_streak.to_string(), theme.style_gold())]),
-            Line::from(vec![Span::styled("  Live Stk", theme.style_dim()), Span::styled(s.blackjack_streak.to_string(), if s.blackjack_streak >= 0 { theme.style_green() } else { theme.style_red() })]),
-            Line::from(vec![Span::styled("  Win Streak", theme.style_dim()), Span::styled(s.blackjack_win_streak.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Loss Streak", theme.style_dim()), Span::styled(s.blackjack_loss_streak.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  Push Streak", theme.style_dim()), Span::styled(s.blackjack_push_streak.to_string(), theme.style_amber())]),
-            Line::from(vec![Span::styled("  Perfect BJ", theme.style_dim()), Span::styled(s.perfect_blackjacks.to_string(), theme.style_gold())]),
-        ])
-        .block(theme.block("Blackjack"))
-        .style(Style::default().fg(theme.text)),
-        top[1],
-    );
-
-    frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled(" Table Notes", theme.style_crimson())),
-            Line::from(""),
-            Line::from(vec![Span::styled("  Busts      ", theme.style_dim()), Span::raw(s.bust_count.to_string())]),
-            Line::from(vec![Span::styled("  Dealer Bust", theme.style_dim()), Span::raw(s.dealer_bust_count.to_string())]),
-            Line::from(vec![Span::styled("  Biggest Win", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(s.biggest_win), theme.style_green())]),
-            Line::from(vec![Span::styled("  Double Downs Won", theme.style_dim()), Span::styled(s.double_down_wins.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Double Downs Lost", theme.style_dim()), Span::styled(s.double_down_losses.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  Splits Won", theme.style_dim()), Span::styled(s.split_wins.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Splits Lost", theme.style_dim()), Span::styled(s.split_losses.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  Save Ver   ", theme.style_dim()), Span::raw(app.data.version.clone())]),
-        ])
-        .block(theme.block("Table Notes"))
-        .style(Style::default().fg(theme.text)),
-        bottom[0],
-    );
-
-    frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled(" Casino Floor", theme.style_crimson())),
-            Line::from(""),
-            Line::from(vec![Span::styled("  Slots Spins", theme.style_dim()), Span::raw(s.slots_spins.to_string())]),
-            Line::from(vec![Span::styled("  Slot Best ", theme.style_dim()), Span::styled(crate::utils::chip_format::format_chips(s.slots_biggest_win), theme.style_amber())]),
-            Line::from(vec![Span::styled("  Mega JP   ", theme.style_dim()), Span::styled(s.jackpot_count_mega.to_string(), theme.style_amber())]),
-            Line::from(vec![Span::styled("  Ultra JP  ", theme.style_dim()), Span::styled(s.jackpot_count_ultra.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  Mini JP   ", theme.style_dim()), Span::styled(s.jackpot_count_mini.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Win Streak", theme.style_dim()), Span::styled(s.slots_win_streak.to_string(), theme.style_green())]),
-            Line::from(vec![Span::styled("  Loss Streak", theme.style_dim()), Span::styled(s.slots_loss_streak.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  🍒 Seen  ", theme.style_dim()), Span::styled(s.cherry_matches.to_string(), theme.style_red())]),
-            Line::from(vec![Span::styled("  🍋 Seen  ", theme.style_dim()), Span::styled(s.lemon_matches.to_string(), Style::default().fg(theme.yellow))]),
-            Line::from(vec![Span::styled("  🔔 Seen  ", theme.style_dim()), Span::styled(s.bell_matches.to_string(), Style::default().fg(theme.gray))]),
-            Line::from(vec![Span::styled("  7  Seen  ", theme.style_dim()), Span::styled(s.seven_matches.to_string(), theme.style_gold())]),
-            Line::from(vec![Span::styled("  💎 Seen  ", theme.style_dim()), Span::styled(s.diamond_matches.to_string(), theme.style_cyan())]),
-            Line::from(vec![Span::styled("  ⭐ Seen  ", theme.style_dim()), Span::styled(s.wild_matches.to_string(), Style::default().fg(theme.white))]),
-            Line::from(vec![Span::styled("  🎰 Seen  ", theme.style_dim()), Span::styled(s.scatter_matches.to_string(), Style::default().fg(theme.magenta))]),
-        ])
-        .block(theme.block("Casino Floor"))
-        .style(Style::default().fg(theme.text)),
-        bottom[1],
-    );
-}
-
-fn draw_settings(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
-    // Settings panel with profile information and options
-    let d = &app.data;
-    let net = d.stats.total_won - d.stats.total_bet;
-    let level = level_icon(d.player.chips);
-    
     let lines = vec![
-        Line::from(""),
-        Line::from(Span::styled("  SETTINGS PANEL  ", theme.style_crimson().add_modifier(Modifier::BOLD))),
-        Line::from(""),
         Line::from(vec![
-            Span::styled("  Player:  ", theme.style_dim()),
-            Span::styled(d.player.name.clone(), theme.style_gold().add_modifier(Modifier::BOLD)),
+            Span::styled(" Current bankroll ", theme.style_dim()),
+            Span::styled(format_chips_long(app.data.player.chips), theme.style_gold()),
         ]),
         Line::from(vec![
-            Span::styled("  Level:   ", theme.style_dim()),
-            Span::styled(level.2, if level.1 >= 10 { theme.style_gold() } else if level.1 >= 5 { theme.style_amber() } else { theme.style_dim() }),
-        ]),
-        Line::from(vec![
-            Span::styled("  Chips:   ", theme.style_dim()),
-            Span::styled(crate::utils::chip_format::format_chips_long(d.player.chips), theme.style_gold().add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("  Net:     ", theme.style_dim()),
+            Span::styled(" Session move      ", theme.style_dim()),
             Span::styled(
-                crate::utils::chip_format::format_chips(net.abs()),
-                if net >= 0 { theme.style_green() } else { theme.style_red() },
+                format_chips(session_net),
+                if session_net >= 0 { theme.style_green() } else { theme.style_red() },
             ),
-            Span::styled(if net >= 0 { " ▲" } else { " ▼" }, if net >= 0 { theme.style_green() } else { theme.style_red() }),
         ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  ──────────────────────  ", theme.style_dim()),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  OPTIONS:  ", theme.style_crimson()),
-        ]),
-        Line::from(vec![Span::styled("  [E] Edit Name    ", theme.style_amber())]),
-        Line::from(vec![Span::styled("  [D] Daily Bonus  ", if d.player.can_claim_daily() { theme.style_green() } else { theme.style_dim() })]),
-        Line::from(vec![Span::styled("  [R] Dev Note     ", theme.style_amber())]),
-        Line::from(vec![Span::styled("  [1-3] Select Game", theme.style_amber())]),
-        Line::from(vec![Span::styled("  [Q] Quit Game    ", theme.style_red())]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  VERSION: ", theme.style_dim()),
-            Span::styled(env!("CARGO_PKG_VERSION"), theme.style_text()),
-        ]),
-        Line::from(""),
+        Line::from(vec![Span::styled(" Total bet         ", theme.style_dim()), Span::styled(format_chips(stats.total_bet), theme.style_red())]),
+        Line::from(vec![Span::styled(" Total won         ", theme.style_dim()), Span::styled(format_chips(stats.total_won), theme.style_green())]),
+        Line::from(vec![Span::styled(" Lifetime net      ", theme.style_dim()), Span::styled(format_chips(net), if net >= 0 { theme.style_green() } else { theme.style_red() })]),
+        Line::from(vec![Span::styled(" Avg bet           ", theme.style_dim()), Span::styled(format_chips(stats.average_bet), theme.style_amber())]),
+        Line::from(vec![Span::styled(" Highest bet       ", theme.style_dim()), Span::styled(format_chips(stats.highest_bet), theme.style_gold())]),
+        Line::from(vec![Span::styled(" Biggest win       ", theme.style_dim()), Span::styled(format_chips(stats.biggest_win), theme.style_green())]),
     ];
 
     frame.render_widget(
         Paragraph::new(lines)
-            .block(theme.block("Settings"))
+            .block(theme.block("Ledger"))
+            .style(Style::default().fg(theme.text)),
+        area,
+    );
+}
+
+fn draw_blackjack(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
+    let stats = &app.data.stats;
+    let total_bj = stats.blackjack_wins + stats.blackjack_losses + stats.blackjack_pushes;
+    let win_rate = if total_bj > 0 {
+        (stats.blackjack_wins as f64 / total_bj as f64 * 100.0) as u64
+    } else {
+        0
+    };
+
+    let lines = vec![
+        Line::from(vec![Span::styled(" Wins          ", theme.style_dim()), Span::styled(stats.blackjack_wins.to_string(), theme.style_green())]),
+        Line::from(vec![Span::styled(" Losses        ", theme.style_dim()), Span::styled(stats.blackjack_losses.to_string(), theme.style_red())]),
+        Line::from(vec![Span::styled(" Pushes        ", theme.style_dim()), Span::styled(stats.blackjack_pushes.to_string(), theme.style_amber())]),
+        Line::from(vec![Span::styled(" Win rate      ", theme.style_dim()), Span::styled(format!("{}%", win_rate), if win_rate >= 50 { theme.style_green() } else { theme.style_amber() })]),
+        Line::from(vec![Span::styled(" Live streak   ", theme.style_dim()), Span::styled(stats.blackjack_streak.to_string(), if stats.blackjack_streak >= 0 { theme.style_green() } else { theme.style_red() })]),
+        Line::from(vec![Span::styled(" Best streak   ", theme.style_dim()), Span::styled(stats.blackjack_best_streak.to_string(), theme.style_gold())]),
+        Line::from(vec![Span::styled(" Perfect BJ    ", theme.style_dim()), Span::styled(stats.perfect_blackjacks.to_string(), theme.style_gold())]),
+        Line::from(vec![Span::styled(" Busts         ", theme.style_dim()), Span::styled(stats.bust_count.to_string(), theme.style_red())]),
+        Line::from(vec![Span::styled(" Dealer busts  ", theme.style_dim()), Span::styled(stats.dealer_bust_count.to_string(), theme.style_green())]),
+        Line::from(vec![Span::styled(" Double W/L    ", theme.style_dim()), Span::styled(format!("{}/{}", stats.double_down_wins, stats.double_down_losses), theme.style_text())]),
+        Line::from(vec![Span::styled(" Split W/L     ", theme.style_dim()), Span::styled(format!("{}/{}", stats.split_wins, stats.split_losses), theme.style_text())]),
+    ];
+
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(theme.block("Blackjack"))
+            .style(Style::default().fg(theme.text)),
+        area,
+    );
+}
+
+fn draw_slots(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
+    let stats = &app.data.stats;
+
+    let lines = vec![
+        Line::from(vec![Span::styled(" Spins         ", theme.style_dim()), Span::styled(stats.slots_spins.to_string(), theme.style_text())]),
+        Line::from(vec![Span::styled(" Biggest hit   ", theme.style_dim()), Span::styled(format_chips(stats.slots_biggest_win), theme.style_amber())]),
+        Line::from(vec![Span::styled(" Mini / Mega   ", theme.style_dim()), Span::styled(format!("{} / {}", stats.jackpot_count_mini, stats.jackpot_count_mega), theme.style_green())]),
+        Line::from(vec![Span::styled(" Ultra         ", theme.style_dim()), Span::styled(stats.jackpot_count_ultra.to_string(), theme.style_red())]),
+        Line::from(vec![Span::styled(" Win streak    ", theme.style_dim()), Span::styled(stats.slots_win_streak.to_string(), theme.style_green())]),
+        Line::from(vec![Span::styled(" Loss streak   ", theme.style_dim()), Span::styled(stats.slots_loss_streak.to_string(), theme.style_red())]),
+        Line::from(vec![Span::styled(" CHRY / LMON   ", theme.style_dim()), Span::styled(format!("{} / {}", stats.cherry_matches, stats.lemon_matches), theme.style_text())]),
+        Line::from(vec![Span::styled(" BELL / SEVN   ", theme.style_dim()), Span::styled(format!("{} / {}", stats.bell_matches, stats.seven_matches), theme.style_text())]),
+        Line::from(vec![Span::styled(" DIAM / WILD   ", theme.style_dim()), Span::styled(format!("{} / {}", stats.diamond_matches, stats.wild_matches), theme.style_text())]),
+        Line::from(vec![Span::styled(" SCATTER       ", theme.style_dim()), Span::styled(stats.scatter_matches.to_string(), theme.style_cyan())]),
+    ];
+
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(theme.block("Slots"))
+            .style(Style::default().fg(theme.text)),
+        area,
+    );
+}
+
+fn draw_sessions(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
+    let stats = &app.data.stats;
+    let session_net = app.data.player.chips - app.session_start_chips;
+    let mut lines = vec![
+        Line::from(vec![Span::styled(" Current run", theme.style_crimson())]),
+        Line::from(vec![Span::styled("  Length  ", theme.style_dim()), Span::styled(format_duration(app.session_start_time.elapsed().as_secs()), theme.style_text())]),
+        Line::from(vec![Span::styled("  Net     ", theme.style_dim()), Span::styled(format_chips(session_net), if session_net >= 0 { theme.style_green() } else { theme.style_red() })]),
+        Line::from(vec![Span::styled("  Games   ", theme.style_dim()), Span::styled(stats.games_played.to_string(), theme.style_text())]),
+        Line::from(""),
+        Line::from(vec![Span::styled(" Recent saves", theme.style_crimson())]),
+    ];
+
+    if stats.session_history.is_empty() {
+        lines.push(Line::from(Span::styled("  No saved sessions yet", theme.style_dim())));
+    } else {
+        for session in stats.session_history.iter().rev().take(3) {
+            lines.push(Line::from(vec![
+                Span::styled("  ", theme.style_dim()),
+                Span::styled(session.date.as_str(), theme.style_text()),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("    ", theme.style_dim()),
+                Span::styled(format_duration(session.duration_seconds), theme.style_dim()),
+                Span::raw("  "),
+                Span::styled(
+                    format_chips(session.net_change),
+                    if session.net_change >= 0 { theme.style_green() } else { theme.style_red() },
+                ),
+            ]));
+        }
+    }
+
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(theme.block("Sessions"))
             .style(Style::default().fg(theme.text)),
         area,
     );
@@ -257,36 +247,39 @@ fn draw_settings(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
 
 fn draw_floor_nav(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     let entries = [
-        (View::Blackjack, "Blackjack Table", "Big cards, double, split, animated finish"),
-        (View::Slots, "Slots Floor", "Jackpots, stronger reel panel, quick machine swap"),
-        (View::Online, "Online Lounge", "Placeholder room while offline stays primary"),
+        (View::Blackjack, "Blackjack Table", "Cards, doubles, splits, dealer pacing"),
+        (View::Slots, "Slots Floor", "Reels, jackpots, machine rotation"),
+        (View::Online, "Online Lounge", "Placeholder for later network play"),
     ];
 
     let mut lines = vec![Line::from(vec![
-        Span::styled("  [↑/↓] ", theme.style_amber()),
+        Span::styled("  [Up/Down] ", theme.style_amber()),
         Span::styled("Move", theme.style_dim()),
         Span::raw("   "),
         Span::styled("[Enter] ", theme.style_amber()),
         Span::styled("Open", theme.style_dim()),
         Span::raw("   "),
-        Span::styled("[R] ", theme.style_amber()),
-        Span::styled("Note", theme.style_dim()),
-        Span::raw("   "),
         Span::styled("[1-4] ", theme.style_amber()),
         Span::styled("Jump", theme.style_dim()),
+        Span::raw("   "),
+        Span::styled("[R] ", theme.style_amber()),
+        Span::styled("Guide", theme.style_dim()),
     ])];
 
     for (i, (_, title, subtitle)) in entries.iter().enumerate() {
         let selected = i == app.dashboard_cursor;
-        let accent = if selected { theme.style_crimson() } else { theme.style_dim() };
-        let label = if selected {
-            Style::default().fg(theme.hl_fg).bg(theme.hl_bg).add_modifier(Modifier::BOLD)
+        let label_style = if selected {
+            Style::default()
+                .fg(theme.hl_fg)
+                .bg(theme.hl_bg)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(theme.text).add_modifier(Modifier::BOLD)
         };
+
         lines.push(Line::from(vec![
-            Span::styled(if selected { " ► " } else { "   " }, accent),
-            Span::styled(*title, label),
+            Span::styled(if selected { " > " } else { "   " }, if selected { theme.style_crimson() } else { theme.style_dim() }),
+            Span::styled(*title, label_style),
         ]));
         lines.push(Line::from(vec![
             Span::styled("    ", theme.style_dim()),
@@ -302,10 +295,28 @@ fn draw_floor_nav(frame: &mut Frame, area: Rect, app: &App, theme: &ProxTheme) {
     );
 }
 
-fn level_icon(chips: i64) -> (&'static str, u32, &'static str) {
-    if chips >= 100_000_000 { ("CROWN", 15, "High Roller") }
-    else if chips >= 10_000_000 { ("ROYAL", 10, "Royal") }
-    else if chips >= 1_000_000 { ("DIAMOND", 6, "Diamond") }
-    else if chips >= 100_000 { ("GOLD", 3, "Gold") }
-    else { ("BRONZE", 1, "Bronze") }
+fn level_icon(chips: i64) -> (&'static str, &'static str) {
+    if chips >= 100_000_000 {
+        ("LVL 15", "High Roller")
+    } else if chips >= 10_000_000 {
+        ("LVL 10", "Royal")
+    } else if chips >= 1_000_000 {
+        ("LVL 06", "Diamond")
+    } else if chips >= 100_000 {
+        ("LVL 03", "Gold")
+    } else {
+        ("LVL 01", "Bronze")
+    }
+}
+
+fn format_duration(total_seconds: u64) -> String {
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    if hours > 0 {
+        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+    } else {
+        format!("{:02}:{:02}", minutes, seconds)
+    }
 }

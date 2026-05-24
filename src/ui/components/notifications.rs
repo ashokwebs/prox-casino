@@ -10,7 +10,7 @@ use crate::ui::theme::ProxTheme;
 
 pub fn draw_notes(frame: &mut Frame, area: Rect, notes: &[String], theme: &ProxTheme) {
     let lines: Vec<Line> = notes.iter().rev().take(4).rev()
-        .map(|n| Line::from(format!(" ● {n}")))
+        .map(|n| Line::from(format!("> {n}")))
         .collect();
     frame.render_widget(
         Paragraph::new(lines)

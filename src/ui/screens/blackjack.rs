@@ -340,78 +340,153 @@ fn card_front(c: &Card, theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'st
         Style::default().fg(border_fg).add_modifier(Modifier::BOLD),
         |fg| Style::default().fg(fg).add_modifier(Modifier::BOLD),
     );
-    let big_suit = match c.suit {
-        crate::games::blackjack::Suit::Spades => vec![
-            Span::styled("   ◢◤◥◣   ", s),
-            Span::styled("  ◢████◣  ", s),
-            Span::styled(" ◢██████◣ ", s),
-            Span::styled(" ◥██████◤ ", s),
-            Span::styled("    ██    ", s),
-        ],
-        crate::games::blackjack::Suit::Hearts => vec![
-            Span::styled("  ◢████◣  ", s),
-            Span::styled(" ◢██████◣ ", s),
-            Span::styled(" ◥██████◤ ", s),
-            Span::styled("  ◥████◤  ", s),
-            Span::styled("   ◥◤◥◤   ", s),
-        ],
-        crate::games::blackjack::Suit::Diamonds => vec![
-            Span::styled("    ◢◣    ", s),
-            Span::styled("   ◢██◣   ", s),
-            Span::styled("  ◢████◣  ", s),
-            Span::styled("   ◥██◤   ", s),
-            Span::styled("    ◥◤    ", s),
-        ],
-        crate::games::blackjack::Suit::Clubs => vec![
-            Span::styled("    ◢◣    ", s),
-            Span::styled("  ◢████◣  ", s),
-            Span::styled(" ◢██████◣ ", s),
-            Span::styled(" ◥██████◤ ", s),
-            Span::styled("    ██    ", s),
-        ],
-    };
+    let body = card_body_rows(c);
 
-    // Every row = 19 chars: ┃(1) + 17 inner + ┃(1)
     vec![
-        Line::from(Span::styled("┏━━━━━━━━━━━━━━━━━┓", b)),
-        // " K ♠             " = 1+2+1+1+12 = 17
+        Line::from(Span::styled("┌─────────────┐", b)),
         Line::from(vec![
-            Span::styled("┃ ", b), Span::styled(format!("{:<2}", rank), s),
-            Span::styled(" ", b), Span::styled(sym, s), Span::styled("            ┃", b),
+            Span::styled("│", b),
+            Span::styled(format!("{:<2} {:>10}", rank, sym), s),
+            Span::styled("│", b),
         ]),
-        Line::from(Span::styled("┃                 ┃", b)),
-        Line::from(vec![Span::styled("┃   ", b), big_suit[0].clone(), Span::styled("    ┃", b)]),
-        Line::from(vec![Span::styled("┃   ", b), big_suit[1].clone(), Span::styled("    ┃", b)]),
-        Line::from(vec![Span::styled("┃   ", b), big_suit[2].clone(), Span::styled("    ┃", b)]),
-        Line::from(vec![Span::styled("┃   ", b), big_suit[3].clone(), Span::styled("    ┃", b)]),
-        Line::from(vec![Span::styled("┃   ", b), big_suit[4].clone(), Span::styled("    ┃", b)]),
-        Line::from(Span::styled("┃                 ┃", b)),
+        Line::from(Span::styled("│             │", b)),
+        Line::from(vec![Span::styled("│", b), Span::styled(body[0].clone(), s), Span::styled("│", b)]),
+        Line::from(vec![Span::styled("│", b), Span::styled(body[1].clone(), s), Span::styled("│", b)]),
+        Line::from(vec![Span::styled("│", b), Span::styled(body[2].clone(), s), Span::styled("│", b)]),
+        Line::from(vec![Span::styled("│", b), Span::styled(body[3].clone(), s), Span::styled("│", b)]),
+        Line::from(vec![Span::styled("│", b), Span::styled(body[4].clone(), s), Span::styled("│", b)]),
+        Line::from(Span::styled("│             │", b)),
         Line::from(vec![
-            Span::styled("┃            ", b), Span::styled(sym, s),
-            Span::styled(" ", b), Span::styled(format!("{:>2}", rank), s), Span::styled(" ┃", b),
+            Span::styled("│", b),
+            Span::styled(format!("{:<10}{:>3}", sym, rank), s),
+            Span::styled("│", b),
         ]),
-        Line::from(Span::styled("┗━━━━━━━━━━━━━━━━━┛", b)),
+        Line::from(Span::styled("└─────────────┘", b)),
     ]
 }
 
 fn card_back(_theme: &ProxTheme, flash: Option<Color>) -> Vec<Line<'static>> {
     let fg = flash.unwrap_or(Color::Rgb(130, 25, 25));
     let c = Style::default().fg(fg).add_modifier(Modifier::BOLD);
-    // Single color, 19 chars: ┃(1) + 17 inner + ┃(1)
     vec![
-        Line::from(Span::styled("┏━━━━━━━━━━━━━━━━━┓", c)),
-        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("█▓█▓█▓█▓█▓█▓█▓█▓█", c), Span::styled("┃", c)]),
-        Line::from(vec![Span::styled("┃", c), Span::styled("▓█▓█▓█▓█▓█▓█▓█▓█▓", c), Span::styled("┃", c)]),
-        Line::from(Span::styled("┗━━━━━━━━━━━━━━━━━┛", c)),
+        Line::from(Span::styled("┌─────────────┐", c)),
+        Line::from(Span::styled("│▒▒▒▒▒▒▒▒▒▒▒▒▒│", c)),
+        Line::from(Span::styled("│▒░▒░▒░▒░▒░▒░▒│", c)),
+        Line::from(Span::styled("│░▒░▒░▒░▒░▒░▒░│", c)),
+        Line::from(Span::styled("│▒░▒ PROX  ░▒░│", c)),
+        Line::from(Span::styled("│░▒░ CASINO▒░▒│", c)),
+        Line::from(Span::styled("│▒░▒░▒░▒░▒░▒░▒│", c)),
+        Line::from(Span::styled("│░▒░▒░▒░▒░▒░▒░│", c)),
+        Line::from(Span::styled("│▒░▒░▒░▒░▒░▒░▒│", c)),
+        Line::from(Span::styled("│▒▒▒▒▒▒▒▒▒▒▒▒▒│", c)),
+        Line::from(Span::styled("└─────────────┘", c)),
     ]
+}
+
+fn card_body_rows(card: &Card) -> [String; 5] {
+    let sym = card.suit_char();
+
+    match card.rank {
+        1 => [
+            blank_row(),
+            blank_row(),
+            center_row(sym),
+            blank_row(),
+            blank_row(),
+        ],
+        2 => [
+            blank_row(),
+            center_row(sym),
+            blank_row(),
+            center_row(sym),
+            blank_row(),
+        ],
+        3 => [
+            blank_row(),
+            center_row(sym),
+            center_row(sym),
+            center_row(sym),
+            blank_row(),
+        ],
+        4 => [
+            pip_row(true, false, true, sym),
+            blank_row(),
+            blank_row(),
+            blank_row(),
+            pip_row(true, false, true, sym),
+        ],
+        5 => [
+            pip_row(true, false, true, sym),
+            blank_row(),
+            center_row(sym),
+            blank_row(),
+            pip_row(true, false, true, sym),
+        ],
+        6 => [
+            pip_row(true, false, true, sym),
+            blank_row(),
+            pip_row(true, false, true, sym),
+            blank_row(),
+            pip_row(true, false, true, sym),
+        ],
+        7 => [
+            pip_row(true, false, true, sym),
+            center_row(sym),
+            pip_row(true, false, true, sym),
+            blank_row(),
+            pip_row(true, false, true, sym),
+        ],
+        8 => [
+            pip_row(true, false, true, sym),
+            center_row(sym),
+            pip_row(true, false, true, sym),
+            center_row(sym),
+            pip_row(true, false, true, sym),
+        ],
+        9 => [
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+            center_row(sym),
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+        ],
+        10 => [
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+            pip_row(true, false, true, sym),
+        ],
+        11 => face_rows("JACK", sym),
+        12 => face_rows("QUEEN", sym),
+        13 => face_rows("KING", sym),
+        _ => [blank_row(), blank_row(), center_row(sym), blank_row(), blank_row()],
+    }
+}
+
+fn face_rows(label: &str, sym: &str) -> [String; 5] {
+    [
+        blank_row(),
+        center_row(label),
+        center_row(sym),
+        center_row(label),
+        blank_row(),
+    ]
+}
+
+fn blank_row() -> String {
+    "             ".to_string()
+}
+
+fn center_row(content: &str) -> String {
+    format!("{:^13}", content)
+}
+
+fn pip_row(left: bool, center: bool, right: bool, sym: &str) -> String {
+    let left = if left { sym } else { " " };
+    let center = if center { sym } else { " " };
+    let right = if right { sym } else { " " };
+    format!("  {}   {}   {}  ", left, center, right)
 }
 
 fn merge_cards(lines: &mut Vec<Line>, card_lines: &[Vec<Line<'static>>]) {
@@ -434,4 +509,3 @@ fn merge_cards(lines: &mut Vec<Line>, card_lines: &[Vec<Line<'static>>]) {
         lines.push(Line::from(row));
     }
 }
-

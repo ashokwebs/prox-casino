@@ -5,11 +5,11 @@ use crate::{models::mode::Mode, ui::theme::ProxTheme};
 pub fn draw_footer(frame: &mut Frame, area: Rect, mode: Mode, theme: &ProxTheme) {
     let (text, style) = match mode {
         Mode::Offline => (
-            " ♦ OFFLINE — Virtual chips · Local saves · Sandbox ",
+            " OFFLINE | Virtual chips | Local saves | Sandbox ",
             theme.style_crimson(),
         ),
         Mode::Online => (
-            " ● ONLINE — Placeholder · Server-authoritative ",
+            " ONLINE | Placeholder | Server-authoritative later ",
             Style::default().fg(theme.amber).add_modifier(ratatui::style::Modifier::BOLD),
         ),
     };

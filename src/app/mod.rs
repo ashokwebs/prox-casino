@@ -53,6 +53,8 @@ impl App {
     pub fn new() -> Result<Self> {
         let svc = SaveService::new()?;
         let d = svc.load()?;
+        let mut slots = SlotsGame::default();
+        slots.state.display_chips = d.player.chips;
         Ok(Self {
             running: true,
             mode: Mode::Offline,
@@ -63,7 +65,7 @@ impl App {
             notes: vec![format!("Loaded: {}", svc.path())],
             data: d.clone(),
             bj: BlackjackEngine::new(),
-            slots: SlotsGame::default(),
+            slots,
             theme: ProxTheme::dark_crimson(),
             help_modal: Modal::new(String::new(), String::new()),
             result_modal: Modal::new(String::new(), String::new()),
@@ -149,8 +151,8 @@ impl App {
     fn show_rules_for_current_view(&mut self) {
         match self.view {
             View::Dashboard => self.show_help(
-                "Developer Note",
-                "WELCOME TO THE OFFLINE FLOOR\n\nThis build is tuned to feel punchy, dramatic, and local-first.\nNo network drama. No account friction. Just chips, stats, jackpots, and fast rounds.\n\nCurrent focus:\n- Blackjack should feel premium and readable\n- Slots should feel heavier, slower, and rarer on wins\n- Dashboard should feel like your private casino profile\n\nHotkeys:\n- [E] edit your offline name\n- [D] claim daily chips\n- [↑/↓] move between floors\n- [Enter] jump in\n\nDeveloper vibe:\nPlay loud. Chase streaks. Break your own best stats.",
+                "Casino Guide",
+                "WELCOME TO THE OFFLINE FLOOR\n\nEverything here runs locally. Your chips, stats, and session history stay on this machine.\n\nDashboard controls:\n- [E] edit your player name\n- [D] claim the daily chip bonus\n- [Up/Down] move between rooms\n- [Enter] open the selected room\n\nUse the dashboard to check your bankroll, pace, and recent sessions before heading back to a table.",
             ),
             View::Blackjack => self.show_help(
                 "Blackjack Rules",
@@ -158,13 +160,21 @@ impl App {
             ),
             View::Slots => self.show_help(
                 "Slots Rules",
-                "OBJECTIVE\nSpin matching symbols for payouts. Wins are intentionally rarer now.\n\nFLOW\n- Set bet with arrows\n- [Space] spins once\n- [A] toggles auto x10\n- [M] changes machine\n\nMACHINES\n- Classic / Retro / Neon use 3 reels\n- Cyber / Hacker use 5 reels\n\nPAYOUT LOGIC\n- Full matches pay best\n- Near-full matches mostly matter on 5-reel machines\n- Wilds help complete lines\n- Scatter now needs 3+ symbols for bonus\n\nJACKPOTS\nEach bet feeds mini, mega, and ultra pots.",
+                "OBJECTIVE\nMatch symbols across paylines for payouts and jackpots.\n\nFLOW\n- Adjust bet with arrows\n- [Space] spins once\n- [A] starts or stops auto x10\n- [M] cycles machines\n\nMACHINES\n- Classic, Retro, Neon, Midnight, Diamond Rush, Lucky 7, Inferno, and Monochrome run 3 reels\n- Cyber, Hacker, and Elite run 5 reels\n\nPAYOUT LOGIC\n- Horizontal rows always pay\n- Diagonals also count on 3-row layouts\n- Wilds complete lines\n- Scatter needs 3 or more symbols for the bonus payout\n\nJACKPOTS\nEvery spin feeds the mini, mega, and ultra pools.",
             ),
             View::Online => self.show_help(
                 "Online Lounge",
-                "Online mode is still a placeholder.\n\nPlanned later:\n- accounts\n- authoritative balance checks\n- leaderboards\n- multiplayer rooms\n\nFor now, the real experience is the offline floor.",
+                "Online mode is still a placeholder.\n\nPlanned later:\n- accounts\n- authoritative balance checks\n- leaderboards\n- multiplayer rooms\n\nFor now, the full game loop is the offline floor.",
             ),
         }
+    }
+
+    fn update_average_bet(&mut self) {
+        self.data.stats.average_bet = if self.data.stats.games_played > 0 {
+            self.data.stats.total_bet / self.data.stats.games_played as i64
+        } else {
+            0
+        };
     }
 
     fn begin_name_edit(&mut self) {
@@ -266,6 +276,7 @@ impl App {
             else if net > 0 { format!("Win +{}", net) }
             else if scatter { format!("Scatter +{}", payout) }
             else { format!("Spin: {}", net) };
+            self.update_average_bet();
             self.push_note(note);
             self.request_save();
         }
@@ -275,8 +286,8 @@ impl App {
                 self.data.stats.dealer_bust_count += 1;
             }
             let results = self.bj.settle();
-            for (outcome, delta) in &results {
-                self.apply_bj(outcome, *delta);
+            for (idx, (outcome, delta)) in results.iter().enumerate() {
+                self.apply_bj(idx, outcome, *delta);
             }
             self.bj.settled = true;
             self.bj.anim = Some(crate::games::blackjack::AnimState {
@@ -302,17 +313,45 @@ impl App {
         }
     }
 
-    fn apply_bj(&mut self, outcome: &Outcome, delta: i64) {
+    fn apply_bj(&mut self, hand_idx: usize, outcome: &Outcome, delta: i64) {
+        let (doubled, split_hand, busted, natural_blackjack) = self
+            .bj
+            .hands
+            .get(hand_idx)
+            .map(|hand| {
+                (
+                    hand.doubled,
+                    self.bj.hands.len() > 1,
+                    hand.value() > 21,
+                    hand.is_blackjack(),
+                )
+            })
+            .unwrap_or((false, false, false, false));
+
         let msg = match outcome {
             Outcome::Blackjack => {
                 self.data.stats.blackjack_wins += 1;
                 self.data.stats.blackjack_win_streak += 1;
                 self.data.stats.blackjack_loss_streak = 0;
                 self.data.stats.blackjack_push_streak = 0;
+                self.data.stats.blackjack_streak = if self.data.stats.blackjack_streak >= 0 {
+                    self.data.stats.blackjack_streak + 1
+                } else {
+                    1
+                };
                 if (self.data.stats.blackjack_win_streak as i64) > self.data.stats.blackjack_best_streak {
                     self.data.stats.blackjack_best_streak = self.data.stats.blackjack_win_streak as i64;
                 }
                 self.data.stats.blackjack_count += 1;
+                if natural_blackjack {
+                    self.data.stats.perfect_blackjacks += 1;
+                }
+                if doubled {
+                    self.data.stats.double_down_wins += 1;
+                }
+                if split_hand {
+                    self.data.stats.split_wins += 1;
+                }
                 self.data.player.chips = self.data.player.chips.saturating_add(delta);
                 self.data.stats.total_won = self.data.stats.total_won.saturating_add(delta);
                 if delta > self.data.stats.biggest_win { self.data.stats.biggest_win = delta; }
@@ -323,8 +362,19 @@ impl App {
                 self.data.stats.blackjack_win_streak += 1;
                 self.data.stats.blackjack_loss_streak = 0;
                 self.data.stats.blackjack_push_streak = 0;
+                self.data.stats.blackjack_streak = if self.data.stats.blackjack_streak >= 0 {
+                    self.data.stats.blackjack_streak + 1
+                } else {
+                    1
+                };
                 if (self.data.stats.blackjack_win_streak as i64) > self.data.stats.blackjack_best_streak {
                     self.data.stats.blackjack_best_streak = self.data.stats.blackjack_win_streak as i64;
+                }
+                if doubled {
+                    self.data.stats.double_down_wins += 1;
+                }
+                if split_hand {
+                    self.data.stats.split_wins += 1;
                 }
                 self.data.player.chips = self.data.player.chips.saturating_add(delta);
                 self.data.stats.total_won = self.data.stats.total_won.saturating_add(delta);
@@ -336,12 +386,19 @@ impl App {
                 self.data.stats.blackjack_loss_streak += 1;
                 self.data.stats.blackjack_win_streak = 0;
                 self.data.stats.blackjack_push_streak = 0;
-                // Only count as bust if any player hand actually busted
-                for h in &self.bj.hands {
-                    if h.value() > 21 {
-                        self.data.stats.bust_count += 1;
-                        break;
-                    }
+                self.data.stats.blackjack_streak = if self.data.stats.blackjack_streak <= 0 {
+                    self.data.stats.blackjack_streak - 1
+                } else {
+                    -1
+                };
+                if busted {
+                    self.data.stats.bust_count += 1;
+                }
+                if doubled {
+                    self.data.stats.double_down_losses += 1;
+                }
+                if split_hand {
+                    self.data.stats.split_losses += 1;
                 }
                 self.data.player.chips = self.data.player.chips.saturating_add(delta);
                 format!("Lose {}", crate::utils::chip_format::format_chips(delta.abs()))
@@ -351,10 +408,12 @@ impl App {
                 self.data.stats.blackjack_push_streak += 1;
                 self.data.stats.blackjack_win_streak = 0;
                 self.data.stats.blackjack_loss_streak = 0;
+                self.data.stats.blackjack_streak = 0;
                 "Push".to_string()
             }
         };
         self.data.stats.games_played += 1;
+        self.update_average_bet();
         self.push_note(msg);
         self.request_save();
     }
@@ -438,7 +497,6 @@ impl App {
             KeyCode::Char('d') | KeyCode::Char('D') => {
                 let extra = self.bj.double_down(self.data.player.chips);
                 if extra > 0 {
-                    self.data.player.chips = self.data.player.chips.saturating_sub(extra);
                     self.data.stats.total_bet += extra;
                     self.record_highest_bet(self.bj.bet + extra);
                 }
@@ -446,7 +504,6 @@ impl App {
             KeyCode::Char('p') | KeyCode::Char('P') => {
                 let extra = self.bj.split(self.data.player.chips);
                 if extra > 0 {
-                    self.data.player.chips = self.data.player.chips.saturating_sub(extra);
                     self.data.stats.total_bet += extra;
                     self.record_highest_bet(extra);
                 }
